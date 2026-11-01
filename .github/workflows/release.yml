@@ -65,7 +65,8 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Build
-        run: pnpm --filter "./${{ matrix.package }}" run build
+        # "..." builds the package's workspace dependencies first (the plugin needs the eight modules' builds)
+        run: pnpm --filter "./${{ matrix.package }}..." run build
 
       - name: Publish to npm
         run: pnpm publish ./${{ matrix.package }} --access public --provenance --no-git-checks
