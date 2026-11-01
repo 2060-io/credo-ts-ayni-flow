@@ -1,0 +1,60 @@
+{
+  "name": "@ayni.org/vs-agent-plugin-ayni-flow",
+  "type": "module",
+  "version": "0.1.2",
+  "main": "./build/index.js",
+  "types": "./build/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./build/index.d.ts",
+      "default": "./build/index.js"
+    }
+  },
+  "files": [
+    "build"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "Apache-2.0",
+  "description": "VS Agent plugin for the Ayni Flow Profile 1.0: the ayni-flow envelope and its seven carrier protocols as Credo modules, Admin API v2 routes and webhook events (CC-VSA-005, CC-VSA-007, CC-VSA-010)",
+  "homepage": "https://github.com/2060-io/credo-ts-ayni-flow/tree/main/packages/vs-agent-plugin",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/2060-io/credo-ts-ayni-flow",
+    "directory": "packages/vs-agent-plugin"
+  },
+  "scripts": {
+    "build": "rimraf ./build && tsc -p tsconfig.build.json",
+    "clean": "rimraf ./build",
+    "compile": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "pnpm run build"
+  },
+  "dependencies": {
+    "@ayni.org/credo-ts-didcomm-authorize": "workspace:^",
+    "@ayni.org/credo-ts-didcomm-ayni-flow": "workspace:^",
+    "@ayni.org/credo-ts-didcomm-confirm": "workspace:^",
+    "@ayni.org/credo-ts-didcomm-link-session": "workspace:^",
+    "@ayni.org/credo-ts-didcomm-notify": "workspace:^",
+    "@ayni.org/credo-ts-didcomm-reissue": "workspace:^",
+    "@ayni.org/credo-ts-didcomm-session-grant": "workspace:^",
+    "@ayni.org/credo-ts-didcomm-sign-tx": "workspace:^",
+    "class-transformer": "catalog:",
+    "class-validator": "catalog:"
+  },
+  "peerDependencies": {
+    "@credo-ts/core": ">=0.8.0-pr-2704-20261026000000 <0.9.0",
+    "@credo-ts/didcomm": ">=0.8.0-pr-2704-20261026000000 <0.9.0",
+    "@nestjs/common": "^10.0.0",
+    "@nestjs/swagger": "^8.0.0",
+    "@verana-labs/vs-agent-sdk": ">=2.0.0-dev.100"
+  },
+  "devDependencies": {
+    "@credo-ts/core": "catalog:",
+    "@credo-ts/didcomm": "catalog:",
+    "@nestjs/common": "catalog:",
+    "@nestjs/swagger": "catalog:",
+    "@verana-labs/vs-agent-sdk": "catalog:",
+    "reflect-metadata": "^0.2.2"
+  }
+}

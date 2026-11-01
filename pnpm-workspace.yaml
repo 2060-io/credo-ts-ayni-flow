@@ -11,8 +11,25 @@ catalog:
   'class-transformer': 0.5.1
   'class-validator': ^0.14.3
   'tsyringe': ^4.10.0
+  '@verana-labs/vs-agent-sdk': 2.0.0-dev.102
+  '@verana-labs/vs-agent-model': 2.0.0-dev.102
+  '@nestjs/common': ^10.4.0
+  '@nestjs/swagger': ^8.1.0
 
 allowBuilds:
   '@openwallet-foundation/askar-nodejs': true
   koffi: true
   cbor-extract: false
+  '@hyperledger/anoncreds-nodejs': false
+  '@nestjs/core': false
+  '@scarf/scarf': false
+  protobufjs: false
+
+# vs-agent-sdk pins its own Credo snapshot; the workspace runs one Credo instance, the catalog one
+overrides:
+  '@credo-ts/core': 0.8.0-pr-2704-20261029165313
+  '@credo-ts/didcomm': 0.8.0-pr-2704-20261029165313
+  '@credo-ts/askar': 0.8.0-pr-2704-20261029165313
+  '@credo-ts/anoncreds': 0.8.0-pr-2704-20261029165313
+  '@credo-ts/webvh': 0.8.0-pr-2704-20261029165313
+  '@credo-ts/node': 0.8.0-pr-2704-20261029165313
