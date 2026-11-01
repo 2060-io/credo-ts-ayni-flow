@@ -127,10 +127,11 @@ and `src/validation.ts` are written by hand. Change the template, run the script
 
 ## Releasing
 
-[release-please](https://github.com/googleapis/release-please) opens one release PR per package from the conventional
-commits that touched it; merging it tags `<package>@vX.Y.Z` and the [release workflow](.github/workflows/release.yml)
-publishes to npm with provenance through **trusted publishing** (OIDC): each npm package must list this repository and
-`release.yml` as a trusted publisher. No token secret is stored.
+[release-please](https://github.com/googleapis/release-please) opens **one release PR** for the whole repository from the
+conventional commits since the last release; the eight packages are linked and always share one version number. Merging
+the PR tags `<package>@vX.Y.Z` for each of them and the [release workflow](.github/workflows/release.yml) publishes them
+to npm with provenance through **trusted publishing** (OIDC): each npm package lists this repository and `release.yml`
+as a trusted publisher. No token secret is stored.
 
 ## License
 

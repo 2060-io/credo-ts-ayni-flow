@@ -3,17 +3,57 @@
   "include-component-in-tag": true,
   "include-v-in-tag": true,
   "tag-separator": "@",
-  "separate-pull-requests": true,
+  "separate-pull-requests": false,
   "bump-minor-pre-major": true,
   "bump-patch-for-minor-pre-major": true,
   "packages": {
-    "packages/ayni-flow": { "release-type": "node" },
-    "packages/authorize": { "release-type": "node" },
-    "packages/confirm": { "release-type": "node" },
-    "packages/link-session": { "release-type": "node" },
-    "packages/session-grant": { "release-type": "node" },
-    "packages/sign-tx": { "release-type": "node" },
-    "packages/notify": { "release-type": "node" },
-    "packages/reissue": { "release-type": "node" }
-  }
+    "packages/ayni-flow": {
+      "release-type": "node",
+      "component": "credo-ts-didcomm-ayni-flow"
+    },
+    "packages/authorize": {
+      "release-type": "node",
+      "component": "credo-ts-didcomm-authorize"
+    },
+    "packages/confirm": {
+      "release-type": "node",
+      "component": "credo-ts-didcomm-confirm"
+    },
+    "packages/link-session": {
+      "release-type": "node",
+      "component": "credo-ts-didcomm-link-session"
+    },
+    "packages/session-grant": {
+      "release-type": "node",
+      "component": "credo-ts-didcomm-session-grant"
+    },
+    "packages/sign-tx": {
+      "release-type": "node",
+      "component": "credo-ts-didcomm-sign-tx"
+    },
+    "packages/notify": {
+      "release-type": "node",
+      "component": "credo-ts-didcomm-notify"
+    },
+    "packages/reissue": {
+      "release-type": "node",
+      "component": "credo-ts-didcomm-reissue"
+    }
+  },
+  "plugins": [
+    {
+      "type": "linked-versions",
+      "groupName": "ayni-flow",
+      "components": [
+        "credo-ts-didcomm-ayni-flow",
+        "credo-ts-didcomm-authorize",
+        "credo-ts-didcomm-confirm",
+        "credo-ts-didcomm-link-session",
+        "credo-ts-didcomm-session-grant",
+        "credo-ts-didcomm-sign-tx",
+        "credo-ts-didcomm-notify",
+        "credo-ts-didcomm-reissue"
+      ]
+    }
+  ]
 }
