@@ -1,7 +1,7 @@
 {
   "name": "@2060.io/credo-ts-didcomm-sign-tx",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "main": "./build/index.js",
   "module": "./build/index.js",
   "types": "./build/index.d.ts",
@@ -18,7 +18,7 @@
     "access": "public"
   },
   "license": "Apache-2.0",
-  "description": "Credo-TS module for the sign-tx/1.0 DIDComm protocol (Ayni Flow Profile 1.0 \u00a76.9): a service hands the holder a Cosmos SDK sign document to sign and, optionally, broadcast",
+  "description": "Credo-TS module for the sign-tx/1.0 DIDComm protocol (Ayni Flow Profile 1.0 §6.9): a service hands the holder a Cosmos SDK sign document to sign and, optionally, broadcast",
   "homepage": "https://github.com/2060-io/credo-ts-ayni-flow/tree/main/packages/sign-tx",
   "repository": {
     "type": "git",
