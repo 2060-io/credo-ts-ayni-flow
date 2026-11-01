@@ -4,7 +4,7 @@ import {
   SubjectNetwork,
   type TestAgent,
   waitForEvent,
-} from '@2060.io/credo-ts-ayni-test-utils'
+} from '@ayni.org/credo-ts-ayni-test-utils'
 import { JsonTransformer } from '@credo-ts/core'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 

@@ -58,7 +58,7 @@ def gen(name):
   roles_enum = '\n'.join(f"  {r[0]} = '{r[1]}'," for r in P['roles'])
 
   w(f'{d}/package.json', json.dumps({
-    "name": f"@2060.io/credo-ts-didcomm-{name}", "type": "module", "version": "0.1.0",
+    "name": f"@ayni.org/credo-ts-didcomm-{name}", "type": "module", "version": "0.1.0",
     "main": "./build/index.js", "module": "./build/index.js", "types": "./build/index.d.ts",
     "exports": {".": {"types": "./build/index.d.ts", "default": "./build/index.js"}},
     "files": ["build"], "publishConfig": {"access": "public"}, "license": "Apache-2.0",
