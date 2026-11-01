@@ -1,7 +1,7 @@
 {
   "name": "@2060.io/credo-ts-didcomm-session-grant",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "main": "./build/index.js",
   "module": "./build/index.js",
   "types": "./build/index.d.ts",
@@ -18,7 +18,7 @@
     "access": "public"
   },
   "license": "Apache-2.0",
-  "description": "Credo-TS module for the session-grant/1.0 DIDComm protocol (Ayni Flow Profile 1.0 \u00a76.8): the holder obtains a single-use grant for its own AG-UI session",
+  "description": "Credo-TS module for the session-grant/1.0 DIDComm protocol (Ayni Flow Profile 1.0 §6.8): the holder obtains a single-use grant for its own AG-UI session",
   "homepage": "https://github.com/2060-io/credo-ts-ayni-flow/tree/main/packages/session-grant",
   "repository": {
     "type": "git",
