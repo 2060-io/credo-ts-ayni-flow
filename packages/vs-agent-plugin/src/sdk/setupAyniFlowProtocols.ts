@@ -7,7 +7,7 @@ import { ReissueModule, ReissueRole } from '@ayni.org/credo-ts-didcomm-reissue'
 import { SessionGrantModule, SessionGrantRole } from '@ayni.org/credo-ts-didcomm-session-grant'
 import { SignTxModule, SignTxRole } from '@ayni.org/credo-ts-didcomm-sign-tx'
 
-import type { AyniFlowModules, AyniFlowPluginOptions } from '../types'
+import type { AyniFlowModules, AyniFlowPluginOptions } from '../types.js'
 
 export interface AyniFlowSdkPlugin {
   modules: AyniFlowModules

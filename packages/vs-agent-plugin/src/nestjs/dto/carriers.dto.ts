@@ -12,7 +12,7 @@ import {
   ValidateNested,
 } from 'class-validator'
 
-import { AttestationDto, CarrierRequestBaseDto } from './common.dto'
+import { AttestationDto, CarrierRequestBaseDto } from './common.dto.js'
 
 // ---- authorize/1.0 (profile §6.5) --------------------------------------------------------------
 

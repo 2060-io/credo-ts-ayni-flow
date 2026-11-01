@@ -1,10 +1,10 @@
 import type { VsAgentNestPlugin } from '@verana-labs/vs-agent-sdk'
 
-import { ayniFlowEvents } from '../events/ayniFlowEvents'
-import { setupAyniFlowProtocols } from '../sdk/setupAyniFlowProtocols'
-import type { AyniFlowPluginOptions, AyniFlowSide } from '../types'
-import { AYNI_FLOW_DIDCOMM_MODULES } from './didcommModules'
-import { V2DidcommAyniFlowController } from './V2DidcommAyniFlowController'
+import { ayniFlowEvents } from '../events/ayniFlowEvents.js'
+import { setupAyniFlowProtocols } from '../sdk/setupAyniFlowProtocols.js'
+import type { AyniFlowPluginOptions, AyniFlowSide } from '../types.js'
+import { AYNI_FLOW_DIDCOMM_MODULES } from './didcommModules.js'
+import { V2DidcommAyniFlowController } from './V2DidcommAyniFlowController.js'
 import {
   V2DidcommAuthorizeController,
   V2DidcommConfirmController,
@@ -14,7 +14,7 @@ import {
   V2DidcommRevocationNotificationController,
   V2DidcommSessionGrantController,
   V2DidcommSignTxController,
-} from './V2DidcommCarrierControllers'
+} from './V2DidcommCarrierControllers.js'
 
 export const AYNI_FLOW_PLUGIN_NAME = 'ayni-flow'
 

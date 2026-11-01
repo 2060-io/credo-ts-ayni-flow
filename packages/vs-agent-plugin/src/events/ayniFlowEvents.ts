@@ -10,7 +10,7 @@ import type { BaseLogger } from '@credo-ts/core'
 import type { VsAgent } from '@verana-labs/vs-agent-sdk'
 import { emitModuleMessageEvent } from '@verana-labs/vs-agent-sdk'
 
-import { toCarrierExchangeDto, toFlowDto } from '../nestjs/dto'
+import { toCarrierExchangeDto, toFlowDto } from '../nestjs/dto/index.js'
 
 /** The webhook event types this plugin delivers (`type` of the webhook body; `data` is the flow or exchange DTO plus `previousState`). */
 export const AYNI_FLOW_EVENT = {

@@ -21,8 +21,8 @@ import {
 } from '@nestjs/swagger'
 import type { VsAgent } from '@verana-labs/vs-agent-sdk'
 
-import type { AyniFlowAgentModules } from '../types'
-import { CloseFlowBodyDto, FlowDto, FlowProblemReportBodyDto, OpenFlowBodyDto, toFlowDto } from './dto'
+import type { AyniFlowAgentModules } from '../types.js'
+import { CloseFlowBodyDto, FlowDto, FlowProblemReportBodyDto, OpenFlowBodyDto, toFlowDto } from './dto/index.js'
 
 /** `https://didcomm.org/ayni-flow/1.0` (flow profile §5): the envelope that groups carrier messages into one flow. */
 @ApiTags('v2/didcomm')

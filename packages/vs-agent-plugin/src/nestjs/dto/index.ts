@@ -1,3 +1,3 @@
-export * from './ayni-flow.dto'
-export * from './carriers.dto'
-export * from './common.dto'
+export * from './ayni-flow.dto.js'
+export * from './carriers.dto.js'
+export * from './common.dto.js'

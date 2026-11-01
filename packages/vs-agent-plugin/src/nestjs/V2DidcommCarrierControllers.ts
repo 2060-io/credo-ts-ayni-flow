@@ -20,7 +20,7 @@ import {
 } from '@nestjs/swagger'
 import type { VsAgent } from '@verana-labs/vs-agent-sdk'
 
-import type { AyniFlowAgentModules } from '../types'
+import type { AyniFlowAgentModules } from '../types.js'
 import {
   CarrierExchangeDto,
   FailExchangeBodyDto,
@@ -39,7 +39,7 @@ import {
   SendSignTxBodyDto,
   SentMessageDto,
   toCarrierExchangeDto,
-} from './dto'
+} from './dto/index.js'
 
 const PIPE = new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true })
 
