@@ -1,7 +1,7 @@
 {
   "name": "@ayni.org/credo-ts-didcomm-reissue",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "main": "./build/index.js",
   "module": "./build/index.js",
   "types": "./build/index.d.ts",
@@ -18,7 +18,7 @@
     "access": "public"
   },
   "license": "Apache-2.0",
-  "description": "Credo-TS module for the reissue/1.0 DIDComm protocol (Ayni Flow Profile 1.0 \u00a76.11): after a restore the holder asks an issuer to reissue a credential; the issuer answers with an issue flow or a problem report",
+  "description": "Credo-TS module for the reissue/1.0 DIDComm protocol (Ayni Flow Profile 1.0 §6.11): after a restore the holder asks an issuer to reissue a credential; the issuer answers with an issue flow or a problem report",
   "homepage": "https://github.com/2060-io/credo-ts-ayni-flow/tree/main/packages/reissue",
   "repository": {
     "type": "git",

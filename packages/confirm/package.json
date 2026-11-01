@@ -1,7 +1,7 @@
 {
   "name": "@ayni.org/credo-ts-didcomm-confirm",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "main": "./build/index.js",
   "module": "./build/index.js",
   "types": "./build/index.d.ts",
@@ -18,7 +18,7 @@
     "access": "public"
   },
   "license": "Apache-2.0",
-  "description": "Credo-TS module for the confirm/1.0 DIDComm protocol (Ayni Flow Profile 1.0 \u00a76.6): a yes-or-no with a code the service also shows elsewhere",
+  "description": "Credo-TS module for the confirm/1.0 DIDComm protocol (Ayni Flow Profile 1.0 §6.6): a yes-or-no with a code the service also shows elsewhere",
   "homepage": "https://github.com/2060-io/credo-ts-ayni-flow/tree/main/packages/confirm",
   "repository": {
     "type": "git",

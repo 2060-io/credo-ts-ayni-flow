@@ -1,10 +1,10 @@
 {
-  "packages/ayni-flow": "0.1.0",
-  "packages/authorize": "0.1.1",
-  "packages/confirm": "0.1.0",
-  "packages/link-session": "0.1.1",
-  "packages/session-grant": "0.1.0",
-  "packages/sign-tx": "0.1.1",
-  "packages/notify": "0.1.0",
-  "packages/reissue": "0.1.0"
+  "packages/ayni-flow": "0.1.2",
+  "packages/authorize": "0.1.2",
+  "packages/confirm": "0.1.2",
+  "packages/link-session": "0.1.2",
+  "packages/session-grant": "0.1.2",
+  "packages/sign-tx": "0.1.2",
+  "packages/notify": "0.1.2",
+  "packages/reissue": "0.1.2"
 }
