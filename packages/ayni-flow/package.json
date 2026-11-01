@@ -1,0 +1,46 @@
+{
+  "name": "@2060.io/credo-ts-didcomm-ayni-flow",
+  "type": "module",
+  "version": "0.1.0",
+  "main": "./build/index.js",
+  "module": "./build/index.js",
+  "types": "./build/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./build/index.d.ts",
+      "default": "./build/index.js"
+    }
+  },
+  "files": [
+    "build"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "Apache-2.0",
+  "description": "Credo-TS module for the ayni-flow/1.0 DIDComm protocol (Ayni Flow Profile 1.0): the flow envelope that groups carrier protocol messages by ~thread.pthid",
+  "homepage": "https://github.com/2060-io/credo-ts-ayni-flow/tree/main/packages/ayni-flow",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/2060-io/credo-ts-ayni-flow",
+    "directory": "packages/ayni-flow"
+  },
+  "scripts": {
+    "build": "tsdown --config ./tsdown.config.ts",
+    "clean": "rimraf ./build",
+    "compile": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "pnpm run build"
+  },
+  "dependencies": {
+    "class-transformer": "catalog:",
+    "class-validator": "catalog:"
+  },
+  "peerDependencies": {
+    "@credo-ts/core": ">=0.8.0-pr-2704-20261026000000 <0.9.0",
+    "@credo-ts/didcomm": ">=0.8.0-pr-2704-20261026000000 <0.9.0"
+  },
+  "devDependencies": {
+    "@credo-ts/core": "catalog:",
+    "@credo-ts/didcomm": "catalog:"
+  }
+}

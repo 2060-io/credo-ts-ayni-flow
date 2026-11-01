@@ -1,0 +1,23 @@
+{
+  "name": "@2060.io/credo-ts-ayni-test-utils",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "description": "Shared test helpers of this monorepo (two in-memory Credo agents over rxjs transports); never published",
+  "license": "Apache-2.0",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "echo 'test-utils is not built'",
+    "clean": "echo 'nothing to clean'"
+  },
+  "dependencies": {
+    "@credo-ts/askar": "catalog:",
+    "@credo-ts/core": "catalog:",
+    "@credo-ts/didcomm": "catalog:",
+    "@credo-ts/node": "catalog:",
+    "@openwallet-foundation/askar-nodejs": "catalog:",
+    "@openwallet-foundation/askar-shared": "catalog:",
+    "rxjs": "^7.8.2"
+  }
+}
