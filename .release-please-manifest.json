@@ -6,5 +6,5 @@
   "packages/session-grant": "0.1.0",
   "packages/sign-tx": "0.1.0",
   "packages/notify": "0.1.0",
-  "packages/reissue": "0.1.0"
+  "packages/reissue": "0.1.1"
 }
