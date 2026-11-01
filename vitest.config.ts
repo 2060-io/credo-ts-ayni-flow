@@ -19,8 +19,8 @@ export default defineConfig({
   },
   resolve: {
     alias: [
-      { find: /^@2060\.io\/credo-ts-didcomm-(.*)$/, replacement: `${import.meta.dirname}/packages/$1/src` },
-      { find: '@2060.io/credo-ts-ayni-test-utils', replacement: `${import.meta.dirname}/packages/test-utils/src` },
+      { find: /^@ayni\.org\/credo-ts-didcomm-(.*)$/, replacement: `${import.meta.dirname}/packages/$1/src` },
+      { find: '@ayni.org/credo-ts-ayni-test-utils', replacement: `${import.meta.dirname}/packages/test-utils/src` },
     ],
   },
 })

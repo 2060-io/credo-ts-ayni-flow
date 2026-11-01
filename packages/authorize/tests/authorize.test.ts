@@ -4,14 +4,14 @@ import {
   SubjectNetwork,
   type TestAgent,
   waitForEvent,
-} from '@2060.io/credo-ts-ayni-test-utils'
+} from '@ayni.org/credo-ts-ayni-test-utils'
 import {
   AyniFlowEventTypes,
   AyniFlowModule,
   AyniFlowRole,
   AyniFlowState,
   type AyniFlowStateChangedEvent,
-} from '@2060.io/credo-ts-didcomm-ayni-flow'
+} from '@ayni.org/credo-ts-didcomm-ayni-flow'
 import type { Agent } from '@credo-ts/core'
 import { JsonTransformer } from '@credo-ts/core'
 import type { DidCommConnectionRecord } from '@credo-ts/didcomm'

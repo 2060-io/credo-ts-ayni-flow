@@ -11,14 +11,14 @@ in `2060-io/ayni-spec`. Each package names the sections and the `FLOW-*` require
 
 | Package | Protocol | Profile | Roles (holder / service) |
 |---------|----------|---------|--------------------------|
-| [`@2060.io/credo-ts-didcomm-ayni-flow`](packages/ayni-flow) | `https://didcomm.org/ayni-flow/1.0` | §5, §11 | `holder` / `service` |
-| [`@2060.io/credo-ts-didcomm-authorize`](packages/authorize) | `https://didcomm.org/authorize/1.0` | §6.5 | `approver` / `requester` |
-| [`@2060.io/credo-ts-didcomm-confirm`](packages/confirm) | `https://didcomm.org/confirm/1.0` | §6.6 | `confirmer` / `requester` |
-| [`@2060.io/credo-ts-didcomm-link-session`](packages/link-session) | `https://didcomm.org/link-session/1.0` | §6.7 | `holder` / `agent` |
-| [`@2060.io/credo-ts-didcomm-session-grant`](packages/session-grant) | `https://didcomm.org/session-grant/1.0` | §6.8 | `requester` / `agent` |
-| [`@2060.io/credo-ts-didcomm-sign-tx`](packages/sign-tx) | `https://didcomm.org/sign-tx/1.0` | §6.9 | `signer` / `requester` |
-| [`@2060.io/credo-ts-didcomm-notify`](packages/notify) | `https://didcomm.org/notify/1.0` | §6.10 | `receiver` / `sender` |
-| [`@2060.io/credo-ts-didcomm-reissue`](packages/reissue) | `https://didcomm.org/reissue/1.0` | §6.11 | `requester` / `issuer` |
+| [`@ayni.org/credo-ts-didcomm-ayni-flow`](packages/ayni-flow) | `https://didcomm.org/ayni-flow/1.0` | §5, §11 | `holder` / `service` |
+| [`@ayni.org/credo-ts-didcomm-authorize`](packages/authorize) | `https://didcomm.org/authorize/1.0` | §6.5 | `approver` / `requester` |
+| [`@ayni.org/credo-ts-didcomm-confirm`](packages/confirm) | `https://didcomm.org/confirm/1.0` | §6.6 | `confirmer` / `requester` |
+| [`@ayni.org/credo-ts-didcomm-link-session`](packages/link-session) | `https://didcomm.org/link-session/1.0` | §6.7 | `holder` / `agent` |
+| [`@ayni.org/credo-ts-didcomm-session-grant`](packages/session-grant) | `https://didcomm.org/session-grant/1.0` | §6.8 | `requester` / `agent` |
+| [`@ayni.org/credo-ts-didcomm-sign-tx`](packages/sign-tx) | `https://didcomm.org/sign-tx/1.0` | §6.9 | `signer` / `requester` |
+| [`@ayni.org/credo-ts-didcomm-notify`](packages/notify) | `https://didcomm.org/notify/1.0` | §6.10 | `receiver` / `sender` |
+| [`@ayni.org/credo-ts-didcomm-reissue`](packages/reissue) | `https://didcomm.org/reissue/1.0` | §6.11 | `requester` / `issuer` |
 
 The kinds `present`, `issue`, `nfc-read`, `call` and `revoked` ride on protocols Credo and
 [`openwallet-foundation/credo-ts-didcomm-ext`](https://github.com/openwallet-foundation/credo-ts-didcomm-ext) already
@@ -35,8 +35,8 @@ from 2026-10-26 on, and the 0.8.0 release once Credo publishes it. DIDComm v1 on
 ## Usage
 
 ```ts
-import { AyniFlowModule, AyniFlowRole } from '@2060.io/credo-ts-didcomm-ayni-flow'
-import { AuthorizeModule, AuthorizeRole } from '@2060.io/credo-ts-didcomm-authorize'
+import { AyniFlowModule, AyniFlowRole } from '@ayni.org/credo-ts-didcomm-ayni-flow'
+import { AuthorizeModule, AuthorizeRole } from '@ayni.org/credo-ts-didcomm-authorize'
 
 // a Verifiable Service (VS Agent)
 const agent = new Agent({

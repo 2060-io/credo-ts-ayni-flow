@@ -1,5 +1,5 @@
 {
-  "name": "@2060.io/credo-ts-didcomm-link-session",
+  "name": "@ayni.org/credo-ts-didcomm-link-session",
   "type": "module",
   "version": "0.1.0",
   "main": "./build/index.js",
