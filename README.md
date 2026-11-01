@@ -19,6 +19,7 @@ in `2060-io/ayni-spec`. Each package names the sections and the `FLOW-*` require
 | [`@ayni.org/credo-ts-didcomm-sign-tx`](packages/sign-tx) | `https://didcomm.org/sign-tx/1.0` | §6.9 | `signer` / `requester` |
 | [`@ayni.org/credo-ts-didcomm-notify`](packages/notify) | `https://didcomm.org/notify/1.0` | §6.10 | `receiver` / `sender` |
 | [`@ayni.org/credo-ts-didcomm-reissue`](packages/reissue) | `https://didcomm.org/reissue/1.0` | §6.11 | `requester` / `issuer` |
+| [`@ayni.org/vs-agent-plugin-ayni-flow`](packages/vs-agent-plugin) | all of the above as a [VS Agent](https://github.com/verana-labs/vs-agent) plugin: Admin API v2 routes, message routing, webhook events | CC-VSA-005/007/010 | per side |
 
 The kinds `present`, `issue`, `nfc-read`, `call` and `revoked` ride on protocols Credo and
 [`openwallet-foundation/credo-ts-didcomm-ext`](https://github.com/openwallet-foundation/credo-ts-didcomm-ext) already

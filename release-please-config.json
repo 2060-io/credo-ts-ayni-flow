@@ -38,6 +38,10 @@
     "packages/reissue": {
       "release-type": "node",
       "component": "credo-ts-didcomm-reissue"
+    },
+    "packages/vs-agent-plugin": {
+      "release-type": "node",
+      "component": "vs-agent-plugin-ayni-flow"
     }
   },
   "plugins": [
@@ -52,7 +56,8 @@
         "credo-ts-didcomm-session-grant",
         "credo-ts-didcomm-sign-tx",
         "credo-ts-didcomm-notify",
-        "credo-ts-didcomm-reissue"
+        "credo-ts-didcomm-reissue",
+        "vs-agent-plugin-ayni-flow"
       ]
     }
   ]

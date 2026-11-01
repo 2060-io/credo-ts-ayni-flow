@@ -66,9 +66,8 @@ def gen(name):
     "homepage": f"https://github.com/2060-io/credo-ts-ayni-flow/tree/main/packages/{name}",
     "repository": {"type": "git", "url": "https://github.com/2060-io/credo-ts-ayni-flow", "directory": f"packages/{name}"},
     "scripts": {"build": "tsdown --config ./tsdown.config.ts", "clean": "rimraf ./build", "compile": "tsc -p tsconfig.build.json", "prepublishOnly": "pnpm run build"},
-    "dependencies": {"class-transformer": "catalog:", "class-validator": "catalog:"},
-    "peerDependencies": {"@credo-ts/core": ">=0.8.0-pr-2704-20261026000000 <0.9.0", "@credo-ts/didcomm": ">=0.8.0-pr-2704-20261026000000 <0.9.0"},
-    "devDependencies": {"@credo-ts/core": "catalog:", "@credo-ts/didcomm": "catalog:"}
+    "peerDependencies": {"@credo-ts/core": ">=0.8.0-pr-2704-20261026000000 <0.9.0", "@credo-ts/didcomm": ">=0.8.0-pr-2704-20261026000000 <0.9.0", "class-transformer": "^0.5.1", "class-validator": "^0.14.0"},
+    "devDependencies": {"@credo-ts/core": "catalog:", "@credo-ts/didcomm": "catalog:", "class-transformer": "catalog:", "class-validator": "catalog:"}
   }, indent=2) + '\n')
   w(f'{d}/tsconfig.build.json', '''
     {
