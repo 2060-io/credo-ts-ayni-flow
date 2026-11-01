@@ -38,16 +38,16 @@
     "@ayni.org/credo-ts-didcomm-notify": "workspace:^",
     "@ayni.org/credo-ts-didcomm-reissue": "workspace:^",
     "@ayni.org/credo-ts-didcomm-session-grant": "workspace:^",
-    "@ayni.org/credo-ts-didcomm-sign-tx": "workspace:^",
-    "class-transformer": "catalog:",
-    "class-validator": "catalog:"
+    "@ayni.org/credo-ts-didcomm-sign-tx": "workspace:^"
   },
   "peerDependencies": {
     "@credo-ts/core": ">=0.8.0-pr-2704-20261026000000 <0.9.0",
     "@credo-ts/didcomm": ">=0.8.0-pr-2704-20261026000000 <0.9.0",
     "@nestjs/common": "^10.0.0",
     "@nestjs/swagger": "^8.0.0",
-    "@verana-labs/vs-agent-sdk": ">=2.0.0-dev.100"
+    "@verana-labs/vs-agent-sdk": ">=2.0.0-dev.100",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.0"
   },
   "devDependencies": {
     "@credo-ts/core": "catalog:",
@@ -55,6 +55,8 @@
     "@nestjs/common": "catalog:",
     "@nestjs/swagger": "catalog:",
     "@verana-labs/vs-agent-sdk": "catalog:",
-    "reflect-metadata": "^0.2.2"
+    "reflect-metadata": "^0.2.2",
+    "class-transformer": "catalog:",
+    "class-validator": "catalog:"
   }
 }
