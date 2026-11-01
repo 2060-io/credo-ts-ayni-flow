@@ -1,0 +1,20 @@
+name: Continuous Integration
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, labeled]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Reusable 2060 pipeline: build + format + types + tests, PR-title (conventional commits) validation.
+  ci:
+    uses: 2060-io/organization/.github/workflows/2060-linter-call.yml@562f890be78c7fd3f07695446f4506d383c52219 # v0.5.2
+    with:
+      enable-charts-lint: false

@@ -1,0 +1,42 @@
+{
+  "name": "credo-ts-ayni-flow",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Credo-TS DIDComm modules for the Ayni Flow Profile 1.0: ayni-flow, authorize, confirm, link-session, session-grant, sign-tx, notify and reissue",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/2060-io/credo-ts-ayni-flow"
+  },
+  "scripts": {
+    "build": "pnpm -r --filter './packages/*' run build",
+    "clean": "pnpm -r --filter './packages/*' run clean",
+    "check-format": "biome check",
+    "format": "biome check --write",
+    "check-types": "pnpm run check-types:build && pnpm run check-types:tests",
+    "check-types:build": "pnpm -r --filter './packages/*' exec tsc --noEmit -p tsconfig.build.json",
+    "check-types:tests": "tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run",
+    "validate": "pnpm check-format && pnpm check-types && pnpm test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.14",
+    "@credo-ts/askar": "catalog:",
+    "@credo-ts/core": "catalog:",
+    "@credo-ts/didcomm": "catalog:",
+    "@credo-ts/node": "catalog:",
+    "@openwallet-foundation/askar-nodejs": "catalog:",
+    "@openwallet-foundation/askar-shared": "catalog:",
+    "@types/node": "^22.19.0",
+    "reflect-metadata": "^0.2.2",
+    "rimraf": "^6.0.1",
+    "rxjs": "^7.8.2",
+    "tsdown": "^0.16.8",
+    "typescript": "~5.9.3",
+    "vitest": "^4.0.15"
+  },
+  "engines": {
+    "node": ">= 22.11"
+  },
+  "packageManager": "pnpm@12.16.1",
+  "type": "module"
+}

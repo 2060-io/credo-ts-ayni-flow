@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.build.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@2060.io/credo-ts-didcomm-*": ["packages/*/src"],
+      "@2060.io/credo-ts-ayni-test-utils": ["packages/test-utils/src"]
+    },
+    "types": ["vitest/globals", "node"]
+  },
+  "exclude": ["node_modules", "build"]
+}
