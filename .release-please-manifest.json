@@ -1,7 +1,7 @@
 {
   "packages/ayni-flow": "0.1.0",
   "packages/authorize": "0.1.0",
-  "packages/confirm": "0.1.0",
+  "packages/confirm": "0.1.1",
   "packages/link-session": "0.1.0",
   "packages/session-grant": "0.1.0",
   "packages/sign-tx": "0.1.0",
