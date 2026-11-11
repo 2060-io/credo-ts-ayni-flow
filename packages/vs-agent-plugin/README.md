@@ -21,6 +21,16 @@ env:
 and `https://didcomm.org/ayni-flow/*` in `discovery.json`, so that VS Agent queries each new peer for flow
 support (FLOW-CAP-002); the disclosure arrives on the existing connection event.
 
+## Releases
+
+The package is published from this repository's release workflow through npm trusted publishing, with a provenance
+statement: no publish token exists. To check that an installed version was built here:
+
+```sh
+npm view @ayni.org/vs-agent-plugin-ayni-flow dist.attestations
+npm audit signatures
+```
+
 ## Admin API (v2)
 
 | Route | Does |
