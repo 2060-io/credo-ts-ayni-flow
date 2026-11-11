@@ -2,11 +2,21 @@
 # conventional commits that touched it; merging the PR tags `<package>@vX.Y.Z` and publishes.
 # Publishing uses npm trusted publishing (OIDC), so the npm packages must list this repository
 # and this workflow file as a trusted publisher; no NPM_TOKEN secret is needed.
+#
+# Run by hand (workflow_dispatch) with a package path, it publishes that one package at the version
+# on main: the way out when a release was tagged and the package's publish job failed. A version
+# already on npm is left alone.
 name: Release
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package path to publish at its version on main, after a failed publish job (for example packages/vs-agent-plugin)'
+        required: true
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -18,6 +28,7 @@ permissions:
 
 jobs:
   release-please:
+    if: ${{ github.event_name == 'push' }}
     runs-on: ubuntu-latest
     outputs:
       releases_created: ${{ steps.release-please.outputs.releases_created }}
@@ -35,13 +46,17 @@ jobs:
     permissions:
       id-token: write # npm trusted publishing
       contents: read
-    if: ${{ needs.release-please.outputs.releases_created == 'true' }}
+    # after a release, or by hand for one package (release-please is skipped then, hence always())
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || needs.release-please.outputs.releases_created == 'true') }}
     runs-on: ubuntu-latest
     needs: [release-please]
     strategy:
       fail-fast: false
       matrix:
-        package: ${{ fromJson(needs.release-please.outputs.paths_released) }}
+        package: ${{ fromJson(github.event_name == 'workflow_dispatch' && format('["{0}"]', inputs.package) || needs.release-please.outputs.paths_released) }}
+    env:
+      # read from the environment in the steps below, never pasted into a script
+      PACKAGE: ${{ matrix.package }}
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -61,12 +76,34 @@ jobs:
         # OIDC publishing needs a recent npm
         run: npm install -g npm@latest
 
+      - name: Check the package and whether its version is new
+        id: version
+        run: |
+          case "$PACKAGE" in
+            packages/*) ;;
+            *) echo "::error::not a package path: $PACKAGE"; exit 1 ;;
+          esac
+          test -f "$PACKAGE/package.json" || { echo "::error::no package at $PACKAGE"; exit 1; }
+          NAME=$(jq -r .name "$PACKAGE/package.json")
+          VERSION=$(jq -r .version "$PACKAGE/package.json")
+          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
+            echo "$NAME@$VERSION is already on npm; nothing to publish"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install dependencies
+        if: steps.version.outputs.publish == 'true'
         run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Build
-        # "..." builds the package's workspace dependencies first (the plugin needs the eight modules' builds)
-        run: pnpm --filter "./${{ matrix.package }}..." run build
+        if: steps.version.outputs.publish == 'true'
+        # the package and, first, its workspace dependencies (the plugin needs the eight modules' builds). A
+        # directory needs the braces to take the "...": without them only the package itself was built, and the
+        # plugin failed to compile on every release
+        run: pnpm --filter "{./$PACKAGE}..." run build
 
       - name: Publish to npm
-        run: pnpm publish ./${{ matrix.package }} --access public --provenance --no-git-checks
+        if: steps.version.outputs.publish == 'true'
+        run: pnpm publish "./$PACKAGE" --access public --provenance --no-git-checks
