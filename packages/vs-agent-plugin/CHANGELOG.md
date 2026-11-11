@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.4](https://github.com/2060-io/credo-ts-ayni-flow/compare/vs-agent-plugin-ayni-flow@v0.1.3...vs-agent-plugin-ayni-flow@v0.1.4) (2026-11-11)
+
+
+### Bug Fixes
+
+* **vs-agent-plugin:** publish through the release workflow, with provenance ([390344b](https://github.com/2060-io/credo-ts-ayni-flow/commit/390344b95ab7c363c32923334c1028e0a2361cda))
+* **vs-agent-plugin:** publish through the release workflow, with provenance ([5c82fad](https://github.com/2060-io/credo-ts-ayni-flow/commit/5c82fad2817f5c80c9307bf92c7d74429c5f2c47))
+
 ## [0.1.3](https://github.com/2060-io/credo-ts-ayni-flow/compare/vs-agent-plugin-ayni-flow@v0.1.2...vs-agent-plugin-ayni-flow@v0.1.3) (2026-11-01)
 
 
