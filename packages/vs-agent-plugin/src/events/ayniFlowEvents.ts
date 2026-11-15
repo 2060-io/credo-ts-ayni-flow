@@ -3,6 +3,11 @@ import { AyniFlowEventTypes, type AyniFlowStateChangedEvent } from '@ayni.org/cr
 import { ConfirmEventTypes, type ConfirmStateChangedEvent } from '@ayni.org/credo-ts-didcomm-confirm'
 import { LinkSessionEventTypes, type LinkSessionStateChangedEvent } from '@ayni.org/credo-ts-didcomm-link-session'
 import { NotifyEventTypes, type NotifyNotificationReceivedEvent } from '@ayni.org/credo-ts-didcomm-notify'
+import {
+  PeerStatusEventTypes,
+  type PeerStatusQueryReceivedEvent,
+  type PeerStatusReceivedEvent,
+} from '@ayni.org/credo-ts-didcomm-peer-status'
 import { ReissueEventTypes, type ReissueStateChangedEvent } from '@ayni.org/credo-ts-didcomm-reissue'
 import { SessionGrantEventTypes, type SessionGrantStateChangedEvent } from '@ayni.org/credo-ts-didcomm-session-grant'
 import { SignTxEventTypes, type SignTxStateChangedEvent } from '@ayni.org/credo-ts-didcomm-sign-tx'
@@ -22,6 +27,8 @@ export const AYNI_FLOW_EVENT = {
   signTxStateChanged: 'didcomm.sign-tx.state-changed',
   reissueStateChanged: 'didcomm.reissue.state-changed',
   notificationReceived: 'didcomm.notify.notification-received',
+  peerStatusReceived: 'didcomm.peer-status.status-received',
+  peerStatusQueryReceived: 'didcomm.peer-status.query-received',
 } as const
 
 export type AyniFlowEventType = (typeof AYNI_FLOW_EVENT)[keyof typeof AYNI_FLOW_EVENT]
@@ -71,6 +78,23 @@ export const ayniFlowEvents = (agent: VsAgent<any>, logger: BaseLogger) => {
       connectionId: payload.connectionId,
       flowId: payload.parentThreadId,
       ...payload.notification,
+    })
+  })
+
+  // peer-status (CC-VSA-012): what a peer says of this agent, and a peer asking where it stands
+  agent.events.on(PeerStatusEventTypes.PeerStatusReceived, ({ payload }: PeerStatusReceivedEvent) => {
+    emitModuleMessageEvent(agent, AYNI_FLOW_EVENT.peerStatusReceived, {
+      messageId: payload.messageId,
+      connectionId: payload.connectionId,
+      status: payload.status,
+      previous: payload.previous ?? null,
+    })
+  })
+  agent.events.on(PeerStatusEventTypes.PeerStatusQueryReceived, ({ payload }: PeerStatusQueryReceivedEvent) => {
+    emitModuleMessageEvent(agent, AYNI_FLOW_EVENT.peerStatusQueryReceived, {
+      messageId: payload.messageId,
+      connectionId: payload.connectionId,
+      answered: payload.answered,
     })
   })
 }

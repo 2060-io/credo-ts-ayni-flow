@@ -15,6 +15,8 @@ function isHttpsUrl(value: unknown): boolean {
 /** The rules of profile §6.8 on a request; returns the first violation or undefined. */
 export function validateRequest(request: SessionGrantRequest): string | undefined {
   if (typeof request.agentDid !== 'string' || !request.agentDid.startsWith('did:')) return 'agent_did must be a DID'
+  if (request.endpoint !== undefined && (typeof request.endpoint !== 'string' || !request.endpoint))
+    return 'endpoint must be a name when given'
   if (request.conversationId != null && typeof request.conversationId !== 'string')
     return 'conversation_id must be a string or null'
   if (typeof request.newConversation !== 'boolean') return 'new_conversation must be a boolean'

@@ -9,6 +9,7 @@ import { JsonTransformer } from '@credo-ts/core'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import {
+  SESSION_GRANT_DEFAULT_ENDPOINT,
   SESSION_GRANT_REQUEST_TYPE,
   SESSION_GRANT_RESPONSE_TYPE,
   SessionGrantEventTypes,
@@ -18,6 +19,7 @@ import {
   SessionGrantRole,
   SessionGrantState,
   type SessionGrantStateChangedEvent,
+  validateRequest,
 } from '../src'
 
 const request = {
@@ -61,6 +63,25 @@ describe('session-grant/1.0 messages', () => {
 })
 
 const modules = (roles: SessionGrantRole[]) => ({ sessionGrant: new SessionGrantModule({ roles }) })
+
+describe('session-grant/1.0 endpoint (FLOW-GRANT-004)', () => {
+  it('names the endpoint when the request gives one, and leaves it out when it does not', () => {
+    const named = new SessionGrantRequestMessage({ ...request, endpoint: 'ag-ui', id: 'req-2' })
+    const json = JsonTransformer.toJSON(named)
+    expect(json.endpoint).toBe('ag-ui')
+    expect(JsonTransformer.fromJSON(json, SessionGrantRequestMessage).toRequest()).toEqual({
+      ...request,
+      endpoint: 'ag-ui',
+    })
+    // a request of the earlier form says nothing: the session is for the conversation channel
+    const plain = new SessionGrantRequestMessage({ ...request, id: 'req-3' })
+    expect('endpoint' in JsonTransformer.toJSON(plain)).toBe(false)
+    expect(plain.toRequest()).toEqual(request)
+    expect(SESSION_GRANT_DEFAULT_ENDPOINT).toBe('ag-ui')
+    expect(validateRequest({ ...request, endpoint: '' })).toMatch(/endpoint/)
+    expect(validateRequest({ ...request, endpoint: 'a2a' })).toBeUndefined()
+  })
+})
 
 describe('session-grant/1.0 between a holder and an agent', () => {
   const network = new SubjectNetwork()

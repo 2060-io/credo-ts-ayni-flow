@@ -39,6 +39,10 @@
       "release-type": "node",
       "component": "credo-ts-didcomm-reissue"
     },
+    "packages/peer-status": {
+      "release-type": "node",
+      "component": "credo-ts-didcomm-peer-status"
+    },
     "packages/vs-agent-plugin": {
       "release-type": "node",
       "component": "vs-agent-plugin-ayni-flow"
@@ -57,6 +61,7 @@
         "credo-ts-didcomm-sign-tx",
         "credo-ts-didcomm-notify",
         "credo-ts-didcomm-reissue",
+        "credo-ts-didcomm-peer-status",
         "vs-agent-plugin-ayni-flow"
       ]
     }

@@ -252,6 +252,15 @@ export class SessionGrantRequestDto {
   @IsNotEmpty()
   agentDid!: string
 
+  @ApiPropertyOptional({
+    description: 'What the session is for; ag-ui when absent. One the last peer-status of the agent lists as open',
+    example: 'ag-ui',
+  })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  endpoint?: string
+
   @ApiPropertyOptional({ description: 'The conversation to resume, or null' })
   @IsOptional()
   @IsString()
@@ -509,4 +518,96 @@ export class FailExchangeBodyDto {
   @IsOptional()
   @IsString()
   description?: string
+}
+
+// ---- peer-status/1.0 (profile §4.1) -------------------------------------------------------------
+
+export class PeerStatusCredentialDto {
+  @ApiProperty({ example: 'https://ecs.example/vt/schemas-badge-jsc.json' })
+  @IsString()
+  @IsNotEmpty()
+  jsonSchemaCredentialId!: string
+}
+
+export class PeerStatusAuthenticationDto {
+  @ApiProperty({ enum: ['none', 'optional', 'required'] })
+  @IsIn(['none', 'optional', 'required'])
+  rule!: 'none' | 'optional' | 'required'
+
+  @ApiPropertyOptional({ type: PeerStatusCredentialDto, description: 'Absent with the rule none' })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PeerStatusCredentialDto)
+  credential?: PeerStatusCredentialDto
+}
+
+export class PeerStatusRefusalDto {
+  @ApiProperty({ enum: ['untrusted', 'identity-refused', 'not-admitted'] })
+  @IsString()
+  @IsNotEmpty()
+  code!: string
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  comment?: string
+}
+
+export class PeerStatusDto {
+  @ApiProperty({ type: PeerStatusAuthenticationDto })
+  @ValidateNested()
+  @Type(() => PeerStatusAuthenticationDto)
+  authentication!: PeerStatusAuthenticationDto
+
+  @ApiProperty({ description: 'Whether this agent holds a valid identity for the peer' })
+  @IsBoolean()
+  identified!: boolean
+
+  @ApiProperty({ type: [String], example: ['ag-ui'], description: 'What the peer may use on the connection now' })
+  @IsArray()
+  @IsString({ each: true })
+  open!: string[]
+
+  @ApiPropertyOptional({ type: PeerStatusRefusalDto, description: 'Present when this agent does not serve the peer' })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PeerStatusRefusalDto)
+  refusal?: PeerStatusRefusalDto
+}
+
+export class SendPeerStatusBodyDto {
+  @ApiProperty({ description: 'Connection to tell', example: 'conn-1234-5678' })
+  @IsString()
+  @IsNotEmpty()
+  connectionId!: string
+
+  @ApiProperty({ type: PeerStatusDto })
+  @ValidateNested()
+  @Type(() => PeerStatusDto)
+  status!: PeerStatusDto
+}
+
+export class QueryPeerStatusBodyDto {
+  @ApiProperty({ description: 'Connection to ask', example: 'conn-1234-5678' })
+  @IsString()
+  @IsNotEmpty()
+  connectionId!: string
+}
+
+/** The statuses of a connection: the last this agent sent and the last it received. */
+export class PeerStatusRecordDto {
+  @ApiProperty()
+  connectionId!: string
+
+  @ApiPropertyOptional({ type: PeerStatusDto })
+  sent?: PeerStatusDto
+
+  @ApiPropertyOptional()
+  sentAt?: string
+
+  @ApiPropertyOptional({ type: PeerStatusDto })
+  received?: PeerStatusDto
+
+  @ApiPropertyOptional()
+  receivedAt?: string
 }

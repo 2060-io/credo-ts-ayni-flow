@@ -10,4 +10,5 @@ export const AYNI_FLOW_DIDCOMM_MODULES: readonly DidcommModule[] = [
   { module: 'sign-tx', prefixes: ['https://didcomm.org/sign-tx/'] },
   { module: 'notify', prefixes: ['https://didcomm.org/notify/'] },
   { module: 'reissue', prefixes: ['https://didcomm.org/reissue/'] },
+  { module: 'peer-status', prefixes: ['https://didcomm.org/peer-status/'] },
 ]

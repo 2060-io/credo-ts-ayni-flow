@@ -19,7 +19,8 @@ in `2060-io/ayni-spec`. Each package names the sections and the `FLOW-*` require
 | [`@ayni.org/credo-ts-didcomm-sign-tx`](packages/sign-tx) | `https://didcomm.org/sign-tx/1.0` | §6.9 | `signer` / `requester` |
 | [`@ayni.org/credo-ts-didcomm-notify`](packages/notify) | `https://didcomm.org/notify/1.0` | §6.10 | `receiver` / `sender` |
 | [`@ayni.org/credo-ts-didcomm-reissue`](packages/reissue) | `https://didcomm.org/reissue/1.0` | §6.11 | `requester` / `issuer` |
-| [`@ayni.org/vs-agent-plugin-ayni-flow`](packages/vs-agent-plugin) | all of the above as a [VS Agent](https://github.com/verana-labs/vs-agent) plugin: Admin API v2 routes, message routing, webhook events | CC-VSA-005/007/010 | per side |
+| [`@ayni.org/credo-ts-didcomm-peer-status`](packages/peer-status) | `https://didcomm.org/peer-status/1.0` | §4.1 | `receiver` / `notifier` and `receiver` |
+| [`@ayni.org/vs-agent-plugin-ayni-flow`](packages/vs-agent-plugin) | all of the above as a [VS Agent](https://github.com/verana-labs/vs-agent) plugin: Admin API v2 routes, message routing, webhook events | CC-VSA-005/007/010/012 | per side |
 
 The kinds `present`, `issue`, `nfc-read`, `call` and `revoked` ride on protocols Credo and
 [`openwallet-foundation/credo-ts-didcomm-ext`](https://github.com/openwallet-foundation/credo-ts-didcomm-ext) already
@@ -129,7 +130,7 @@ and `src/validation.ts` are written by hand. Change the template, run the script
 ## Releasing
 
 [release-please](https://github.com/googleapis/release-please) opens **one release PR** for the whole repository from the
-conventional commits since the last release; the eight packages are linked and always share one version number. Merging
+conventional commits since the last release; the packages are linked and always share one version number. Merging
 the PR tags `<package>@vX.Y.Z` for each of them and the [release workflow](.github/workflows/release.yml) publishes them
 to npm with provenance through **trusted publishing** (OIDC): each npm package lists this repository and `release.yml`
 as a trusted publisher. No token secret is stored.

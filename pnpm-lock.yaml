@@ -316,6 +316,21 @@ importers:
         specifier: 'catalog:'
         version: 0.14.4
 
+  packages/peer-status:
+    devDependencies:
+      '@credo-ts/core':
+        specifier: 0.8.0-pr-2704-20261029165313
+        version: 0.8.0-pr-2704-20261029165313(supports-color@7.2.0)(typescript@5.9.3)
+      '@credo-ts/didcomm':
+        specifier: 0.8.0-pr-2704-20261029165313
+        version: 0.8.0-pr-2704-20261029165313(supports-color@7.2.0)(typescript@5.9.3)
+      class-transformer:
+        specifier: 'catalog:'
+        version: 0.5.1
+      class-validator:
+        specifier: 'catalog:'
+        version: 0.14.4
+
   packages/reissue:
     devDependencies:
       '@credo-ts/core':
@@ -402,6 +417,9 @@ importers:
       '@ayni.org/credo-ts-didcomm-notify':
         specifier: workspace:^
         version: link:../notify
+      '@ayni.org/credo-ts-didcomm-peer-status':
+        specifier: workspace:^
+        version: link:../peer-status
       '@ayni.org/credo-ts-didcomm-reissue':
         specifier: workspace:^
         version: link:../reissue

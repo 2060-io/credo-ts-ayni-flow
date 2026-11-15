@@ -10,6 +10,7 @@ import {
   V2DidcommConfirmController,
   V2DidcommLinkSessionController,
   V2DidcommNotifyController,
+  V2DidcommPeerStatusController,
   V2DidcommReissueController,
   V2DidcommRevocationNotificationController,
   V2DidcommSessionGrantController,
@@ -32,6 +33,7 @@ export const AyniFlowPlugin = (options: AyniFlowPluginOptions = {}): VsAgentNest
     V2DidcommNotifyController,
     V2DidcommReissueController,
     V2DidcommRevocationNotificationController,
+    V2DidcommPeerStatusController,
   ],
   didcommModules: [...AYNI_FLOW_DIDCOMM_MODULES],
   registerEvents: (agent, logger) => {
