@@ -20,6 +20,7 @@ export class SessionGrantRequestMessage extends DidCommMessage {
       this.id = options.id ?? this.generateId()
       this.setThread({ threadId: this.id, parentThreadId: options.parentThreadId })
       this.agentDid = options.agentDid
+      if (options.endpoint !== undefined) this.endpoint = options.endpoint
       this.conversationId = options.conversationId ?? null
       this.newConversation = options.newConversation
       this.client = new SessionGrantClientModel(options.client)
@@ -33,6 +34,10 @@ export class SessionGrantRequestMessage extends DidCommMessage {
   @Expose({ name: 'agent_did' })
   @IsString()
   public agentDid!: string
+
+  @IsOptional()
+  @IsString()
+  public endpoint?: string
 
   @Expose({ name: 'conversation_id' })
   @IsOptional()
@@ -50,6 +55,7 @@ export class SessionGrantRequestMessage extends DidCommMessage {
   public toRequest(): SessionGrantRequest {
     return {
       agentDid: this.agentDid,
+      ...(this.endpoint !== undefined ? { endpoint: this.endpoint } : {}),
       conversationId: this.conversationId,
       newConversation: this.newConversation,
       client: {

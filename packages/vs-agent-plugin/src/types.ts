@@ -3,6 +3,7 @@ import type { AyniFlowModule } from '@ayni.org/credo-ts-didcomm-ayni-flow'
 import type { ConfirmModule } from '@ayni.org/credo-ts-didcomm-confirm'
 import type { LinkSessionModule } from '@ayni.org/credo-ts-didcomm-link-session'
 import type { NotifyModule } from '@ayni.org/credo-ts-didcomm-notify'
+import type { PeerStatusModule } from '@ayni.org/credo-ts-didcomm-peer-status'
 import type { ReissueModule } from '@ayni.org/credo-ts-didcomm-reissue'
 import type { SessionGrantModule } from '@ayni.org/credo-ts-didcomm-session-grant'
 import type { SignTxModule } from '@ayni.org/credo-ts-didcomm-sign-tx'
@@ -18,6 +19,7 @@ export type AyniFlowModules = {
   signTx: SignTxModule
   notify: NotifyModule
   reissue: ReissueModule
+  peerStatus: PeerStatusModule
 }
 
 export type AyniFlowAgentModules = BaseAgentModules & AyniFlowModules

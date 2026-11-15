@@ -25,6 +25,8 @@ import {
   CarrierExchangeDto,
   FailExchangeBodyDto,
   GrantSessionBodyDto,
+  PeerStatusRecordDto,
+  QueryPeerStatusBodyDto,
   RespondAuthorizeBodyDto,
   RespondConfirmBodyDto,
   RespondLinkSessionBodyDto,
@@ -33,6 +35,7 @@ import {
   SendConfirmBodyDto,
   SendLinkSessionBodyDto,
   SendNotificationBodyDto,
+  SendPeerStatusBodyDto,
   SendReissueBodyDto,
   SendRevocationNotificationBodyDto,
   SendSessionGrantRequestBodyDto,
@@ -346,6 +349,63 @@ export class V2DidcommNotifyController {
       notification: body.notification,
     })
     return { id: messageId }
+  }
+}
+
+/**
+ * `https://didcomm.org/peer-status/1.0` (flow profile §4.1, CC-VSA-012): this agent tells a peer where it stands
+ * with it. One message, outside any flow; the last one sent on a connection answers the peer's `query`.
+ */
+@ApiTags('v2/didcomm')
+@Controller({ path: 'didcomm/peer-status', version: '2' })
+@UsePipes(PIPE)
+export class V2DidcommPeerStatusController {
+  public constructor(@Inject('VSAGENT') private readonly agent: VsAgent<AyniFlowAgentModules>) {}
+
+  @Post()
+  @ApiOperation({
+    summary: 'Tell a peer where it stands',
+    description:
+      'Sends peer-status/1.0/status: how this agent identifies the peer (none, optional, required, with the credential asked for), whether it is identified, and what is open to it. It replaces the status sent before. Send it only to a peer that disclosed the protocol.',
+  })
+  @ApiCreatedResponse({ type: SentMessageDto })
+  public async send(@Body() body: SendPeerStatusBodyDto): Promise<SentMessageDto> {
+    const { messageId } = await this.agent.modules.peerStatus.send({
+      connectionId: body.connectionId,
+      status: body.status,
+    })
+    return { id: messageId }
+  }
+
+  @Post('query')
+  @ApiOperation({
+    summary: 'Ask a peer for its status of this agent',
+    description:
+      'Sends peer-status/1.0/query: for an agent that holds no status of a peer. The answer arrives as a status-received event.',
+  })
+  @ApiCreatedResponse({ type: SentMessageDto })
+  public async query(@Body() body: QueryPeerStatusBodyDto): Promise<SentMessageDto> {
+    const { messageId } = await this.agent.modules.peerStatus.query({ connectionId: body.connectionId })
+    return { id: messageId }
+  }
+
+  @Get(':connectionId')
+  @ApiOperation({
+    summary: 'The statuses of a connection',
+    description: 'The last status this agent sent on the connection and the last it received.',
+  })
+  @ApiOkResponse({ type: PeerStatusRecordDto })
+  @ApiNotFoundResponse({ description: 'No status was sent or received on the connection' })
+  public async get(@Param('connectionId') connectionId: string): Promise<PeerStatusRecordDto> {
+    const record = await this.agent.modules.peerStatus.findByConnectionId(connectionId)
+    if (!record) throw new NotFoundException(`no peer status on connection "${connectionId}"`)
+    return {
+      connectionId: record.connectionId,
+      sent: record.sent,
+      sentAt: record.sentAt,
+      received: record.received,
+      receivedAt: record.receivedAt,
+    }
   }
 }
 

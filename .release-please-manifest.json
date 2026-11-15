@@ -7,5 +7,6 @@
   "packages/sign-tx": "0.1.4",
   "packages/notify": "0.1.4",
   "packages/reissue": "0.1.4",
+  "packages/peer-status": "0.1.4",
   "packages/vs-agent-plugin": "0.1.4"
 }

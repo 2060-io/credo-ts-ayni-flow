@@ -3,6 +3,7 @@ import { AyniFlowModule, AyniFlowRole } from '@ayni.org/credo-ts-didcomm-ayni-fl
 import { ConfirmModule, ConfirmRole } from '@ayni.org/credo-ts-didcomm-confirm'
 import { LinkSessionModule, LinkSessionRole } from '@ayni.org/credo-ts-didcomm-link-session'
 import { NotifyModule, NotifyRole } from '@ayni.org/credo-ts-didcomm-notify'
+import { PeerStatusModule, PeerStatusRole } from '@ayni.org/credo-ts-didcomm-peer-status'
 import { ReissueModule, ReissueRole } from '@ayni.org/credo-ts-didcomm-reissue'
 import { SessionGrantModule, SessionGrantRole } from '@ayni.org/credo-ts-didcomm-session-grant'
 import { SignTxModule, SignTxRole } from '@ayni.org/credo-ts-didcomm-sign-tx'
@@ -16,7 +17,9 @@ export interface AyniFlowSdkPlugin {
 /**
  * The Credo modules of the Ayni Flow Profile 1.0 with the roles of its §3 for one side: a service discloses
  * `requester` (authorize, confirm, sign-tx), `agent` (link-session, session-grant), `sender` (notify), `issuer`
- * (reissue) and `service` (ayni-flow); a holder the opposite roles. Must be used together with `setupBaseDidComm()`.
+ * (reissue) and `service` (ayni-flow); a holder the opposite roles. For peer-status a service is both `notifier`
+ * and `receiver`, since two services each tell the other (profile §4.1), and a holder a `receiver`. Must be used
+ * together with `setupBaseDidComm()`.
  */
 export function setupAyniFlowProtocols(options: AyniFlowPluginOptions = {}): AyniFlowSdkPlugin {
   const service = (options.side ?? 'service') === 'service'
@@ -37,6 +40,9 @@ export function setupAyniFlowProtocols(options: AyniFlowPluginOptions = {}): Ayn
       signTx: new SignTxModule({ roles: [service ? SignTxRole.Requester : SignTxRole.Signer] }),
       notify: new NotifyModule({ roles: [service ? NotifyRole.Sender : NotifyRole.Receiver] }),
       reissue: new ReissueModule({ roles: [service ? ReissueRole.Issuer : ReissueRole.Requester] }),
+      peerStatus: new PeerStatusModule({
+        roles: service ? [PeerStatusRole.Notifier, PeerStatusRole.Receiver] : [PeerStatusRole.Receiver],
+      }),
     },
   }
 }

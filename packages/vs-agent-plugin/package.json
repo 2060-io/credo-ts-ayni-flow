@@ -36,6 +36,7 @@
     "@ayni.org/credo-ts-didcomm-confirm": "workspace:^",
     "@ayni.org/credo-ts-didcomm-link-session": "workspace:^",
     "@ayni.org/credo-ts-didcomm-notify": "workspace:^",
+    "@ayni.org/credo-ts-didcomm-peer-status": "workspace:^",
     "@ayni.org/credo-ts-didcomm-reissue": "workspace:^",
     "@ayni.org/credo-ts-didcomm-session-grant": "workspace:^",
     "@ayni.org/credo-ts-didcomm-sign-tx": "workspace:^"

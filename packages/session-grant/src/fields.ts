@@ -11,9 +11,17 @@ export interface SessionGrantClient {
   appVersion: string
 }
 
+/** What a session grant is for when the request names no endpoint (profile §6.8): the conversation channel. */
+export const SESSION_GRANT_DEFAULT_ENDPOINT = 'ag-ui'
+
 /** The `request` body of session-grant/1.0 (profile §6.8, FLOW-GRANT-001). */
 export interface SessionGrantRequest {
   agentDid: string
+  /**
+   * What the session is for (FLOW-GRANT-004): `ag-ui` when absent. With a service that sends `peer-status`, an
+   * endpoint its last status lists in `open`.
+   */
+  endpoint?: string
   /** The conversation to resume, or null. */
   conversationId?: string | null
   newConversation: boolean

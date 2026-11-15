@@ -9,6 +9,7 @@ import {
 } from '@ayni.org/credo-ts-ayni-test-utils'
 import { AuthorizeRole, AuthorizeState } from '@ayni.org/credo-ts-didcomm-authorize'
 import { AyniFlowRole, AyniFlowState } from '@ayni.org/credo-ts-didcomm-ayni-flow'
+import { PeerStatusRole } from '@ayni.org/credo-ts-didcomm-peer-status'
 import { ReissueRole } from '@ayni.org/credo-ts-didcomm-reissue'
 import { ConsoleLogger, LogLevel } from '@credo-ts/core'
 import { VsAgentEventTypes } from '@verana-labs/vs-agent-sdk'
@@ -22,10 +23,11 @@ import {
   setupAyniFlowProtocols,
   V2DidcommAuthorizeController,
   V2DidcommAyniFlowController,
+  V2DidcommPeerStatusController,
 } from '../src'
 
 describe('plugin shape', () => {
-  it('builds a VS Agent plugin with the eight modules, nine controllers and the routing table', () => {
+  it('builds a VS Agent plugin with the nine modules, ten controllers and the routing table', () => {
     const plugin = AyniFlowPlugin()
     expect(plugin.name).toBe('ayni-flow')
     expect(Object.keys(plugin.credoPlugin!.modules).sort()).toEqual([
@@ -34,11 +36,12 @@ describe('plugin shape', () => {
       'confirm',
       'linkSession',
       'notify',
+      'peerStatus',
       'reissue',
       'sessionGrant',
       'signTx',
     ])
-    expect(plugin.controllers).toHaveLength(9)
+    expect(plugin.controllers).toHaveLength(10)
     expect(plugin.didcommModules?.map((m) => m.module)).toEqual([
       'ayni-flow',
       'authorize',
@@ -48,6 +51,7 @@ describe('plugin shape', () => {
       'sign-tx',
       'notify',
       'reissue',
+      'peer-status',
     ])
   })
 
@@ -60,6 +64,9 @@ describe('plugin shape', () => {
     expect(holder.ayniFlow.config.role).toBe(AyniFlowRole.Holder)
     expect(holder.authorize.config.roles).toEqual([AuthorizeRole.Approver])
     expect(holder.reissue.config.roles).toEqual([ReissueRole.Requester])
+    // peer-status is symmetric between services: a service tells and is told, a holder is told
+    expect(service.peerStatus.config.roles).toEqual([PeerStatusRole.Notifier, PeerStatusRole.Receiver])
+    expect(holder.peerStatus.config.roles).toEqual([PeerStatusRole.Receiver])
   })
 
   it('reads its options from the environment and refuses bad values', () => {
@@ -205,5 +212,88 @@ describe('Admin API and webhook events, service to holder', () => {
       (e) => e.type === AYNI_FLOW_EVENT.flowStateChanged && e.data.flowId === flow.flowId && e.data.state === 'failed'
     )
     expect(event?.data).toMatchObject({ errorCode: 'summary-mismatch', reason: 'mismatch', closedBy: 'peer' })
+  })
+
+  it('tells the holder where it stands, answers its query, and relays a query as a webhook event (CC-VSA-012)', async () => {
+    const peerStatus = new V2DidcommPeerStatusController(service as any)
+    const status = {
+      authentication: {
+        rule: 'required' as const,
+        credential: { jsonSchemaCredentialId: 'https://ecs.example/vt/schemas-badge-jsc.json' },
+      },
+      identified: false,
+      open: [],
+    }
+    await expect(peerStatus.get(serviceConnectionId)).rejects.toThrow(/no peer status/)
+
+    const told = waitForEvent(holder, 'PeerStatusReceived' as any)
+    const sent = await peerStatus.send({ connectionId: serviceConnectionId, status })
+    expect(sent.id).toBeTruthy()
+    expect(((await told) as any).payload.status).toEqual(status)
+    expect(await peerStatus.get(serviceConnectionId)).toMatchObject({ connectionId: serviceConnectionId, sent: status })
+
+    // the holder asks again: the module answers with the status it holds, and the controller hears of the query
+    const asked = waitForEvent(service, 'PeerStatusQueryReceived' as any)
+    const again = waitForEvent(holder, 'PeerStatusReceived' as any)
+    const holderConnection = (await holder.didcomm.connections.getAll())[0]
+    await holder.modules.peerStatus.query({ connectionId: holderConnection.id })
+    await asked
+    expect(((await again) as any).payload.status).toEqual(status)
+    const query = webhook.find((e) => e.type === AYNI_FLOW_EVENT.peerStatusQueryReceived)
+    expect(query?.data).toMatchObject({ connectionId: serviceConnectionId, answered: true })
+
+    await expect(
+      peerStatus.send({
+        connectionId: serviceConnectionId,
+        status: { ...status, open: ['ag-ui'], refusal: { code: 'untrusted' } },
+      })
+    ).rejects.toThrow(/empty with a refusal/)
+  })
+})
+
+describe('peer-status between two services, as webhook events', () => {
+  const network = new SubjectNetwork()
+  type Modules = ReturnType<typeof setupAyniFlowProtocols>['modules']
+  let one: TestAgent<Modules>
+  let other: TestAgent<Modules>
+  let oneConnectionId: string
+  let otherConnectionId: string
+  const webhook: { type: string; data: Record<string, unknown> }[] = []
+
+  beforeAll(async () => {
+    one = createTestAgent({
+      name: 'one',
+      network,
+      modules: setupAyniFlowProtocols({ expiryCheckIntervalMs: 0 }).modules,
+    })
+    other = createTestAgent({
+      name: 'other',
+      network,
+      modules: setupAyniFlowProtocols({ expiryCheckIntervalMs: 0 }).modules,
+    })
+    await one.initialize()
+    await other.initialize()
+    ayniFlowEvents(other as any, new ConsoleLogger(LogLevel.Off))
+    other.events.on(VsAgentEventTypes.ModuleMessageReceived, ({ payload }: any) => {
+      webhook.push(payload)
+    })
+    ;[{ id: oneConnectionId }, { id: otherConnectionId }] = await makeConnection(one, other)
+  })
+
+  afterAll(async () => {
+    await other.shutdown()
+    await one.shutdown()
+  })
+
+  it('delivers what the peer says of this agent as a status-received event', async () => {
+    const status = { authentication: { rule: 'none' as const }, identified: true, open: ['a2a'] }
+    const received = waitForEvent(other, 'PeerStatusReceived' as any)
+    await new V2DidcommPeerStatusController(one as any).send({ connectionId: oneConnectionId, status })
+    await received
+    const event = webhook.find((e) => e.type === AYNI_FLOW_EVENT.peerStatusReceived)
+    expect(event?.data).toMatchObject({ connectionId: otherConnectionId, status, previous: null })
+    expect(await new V2DidcommPeerStatusController(other as any).get(otherConnectionId)).toMatchObject({
+      received: status,
+    })
   })
 })

@@ -1,0 +1,46 @@
+{
+  "name": "@ayni.org/credo-ts-didcomm-peer-status",
+  "type": "module",
+  "version": "0.1.4",
+  "main": "./build/index.js",
+  "module": "./build/index.js",
+  "types": "./build/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./build/index.d.ts",
+      "default": "./build/index.js"
+    }
+  },
+  "files": [
+    "build"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "Apache-2.0",
+  "description": "Credo-TS module for the peer-status/1.0 DIDComm protocol (Ayni Flow Profile 1.0 §4.1): a party tells its peer how it identifies it, whether it is identified and what is open to it",
+  "homepage": "https://github.com/2060-io/credo-ts-ayni-flow/tree/main/packages/peer-status",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/2060-io/credo-ts-ayni-flow",
+    "directory": "packages/peer-status"
+  },
+  "scripts": {
+    "build": "tsdown --config ./tsdown.config.ts",
+    "clean": "rimraf ./build",
+    "compile": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "pnpm run build"
+  },
+  "peerDependencies": {
+    "@credo-ts/core": ">=0.8.0-pr-2704-20261026000000 <0.9.0",
+    "@credo-ts/didcomm": ">=0.8.0-pr-2704-20261026000000 <0.9.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.0"
+  },
+  "devDependencies": {
+    "@credo-ts/core": "catalog:",
+    "@credo-ts/didcomm": "catalog:",
+    "class-transformer": "catalog:",
+    "class-validator": "catalog:"
+  }
+}
