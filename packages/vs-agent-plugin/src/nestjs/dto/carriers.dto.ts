@@ -529,6 +529,20 @@ export class PeerStatusCredentialDto {
   jsonSchemaCredentialId!: string
 }
 
+export class PeerStatusObtainDto {
+  @ApiPropertyOptional({ description: "How the credential is obtained, in this agent's words" })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  text?: string
+
+  @ApiPropertyOptional({ description: 'An https link where it is obtained' })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  url?: string
+}
+
 export class PeerStatusAuthenticationDto {
   @ApiProperty({ enum: ['none', 'optional', 'required'] })
   @IsIn(['none', 'optional', 'required'])
@@ -539,10 +553,30 @@ export class PeerStatusAuthenticationDto {
   @ValidateNested()
   @Type(() => PeerStatusCredentialDto)
   credential?: PeerStatusCredentialDto
+
+  @ApiPropertyOptional({
+    type: [String],
+    example: ['org:EE:12345678'],
+    description:
+      'The organizations whose credentials this agent accepts, by organization key; absent when any accredited issuer of the schema is accepted',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  issuers?: string[]
+
+  @ApiPropertyOptional({
+    type: PeerStatusObtainDto,
+    description: 'How the peer obtains a credential this agent accepts',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PeerStatusObtainDto)
+  obtain?: PeerStatusObtainDto
 }
 
 export class PeerStatusRefusalDto {
-  @ApiProperty({ enum: ['untrusted', 'identity-refused', 'not-admitted'] })
+  @ApiProperty({ enum: ['untrusted', 'not-admitted', 'authentication-declined', 'authentication-unanswered'] })
   @IsString()
   @IsNotEmpty()
   code!: string

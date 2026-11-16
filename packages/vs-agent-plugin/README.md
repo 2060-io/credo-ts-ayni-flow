@@ -45,7 +45,7 @@ npm audit signatures
 | `POST /v2/didcomm/session-grant/{threadId}/grant` | answer a session-grant request |
 | `POST /v2/didcomm/reissue/{threadId}/answered` | record that a reissue was answered |
 | `POST /v2/didcomm/notify` | send a notification |
-| `POST /v2/didcomm/peer-status` | tell a peer where it stands: the rule by which it is identified, whether it is, what is open to it |
+| `POST /v2/didcomm/peer-status` | tell a peer where it stands: the rule by which it is identified, the organizations whose credentials are accepted and how the credential is obtained, whether it is identified, what is open to it |
 | `POST /v2/didcomm/peer-status/query`, `GET /v2/didcomm/peer-status/{connectionId}` | ask a peer for its status of this agent; read the last status sent and received on a connection |
 | `POST /v2/didcomm/revocation-notification` | send `revocation_notification/2.0/revoke` |
 | `GET /v2/didcomm/{protocol}[/{threadId}]`, `POST .../{threadId}/fail` | read exchanges, record a controller-side failure |
@@ -54,7 +54,7 @@ npm audit signatures
 
 `didcomm.ayni-flow.state-changed` (the flow DTO plus `previousState`; a peer's problem report arrives as `state:
 failed` with `errorCode` and `closedBy: peer`), `didcomm.{authorize,confirm,link-session,session-grant,sign-tx,
-reissue}.state-changed` (the exchange DTO plus `previousState`), `didcomm.notify.notification-received`, `didcomm.peer-status.status-received` (what a peer says of this agent, with the status it replaces) and `didcomm.peer-status.query-received` (a peer asks; `answered` tells whether the plugin sent the status it holds).
+reissue}.state-changed` (the exchange DTO plus `previousState`), `didcomm.notify.notification-received`, `didcomm.peer-status.status-received` (what a peer says of this agent, with the status it replaces) `didcomm.peer-status.query-received` (a peer asks; `answered` tells whether the plugin sent the status it holds) and `didcomm.peer-status.authenticate-received` (a peer asks to be asked for its credential: the controller opens an `authenticate` flow).
 
 ## In code
 

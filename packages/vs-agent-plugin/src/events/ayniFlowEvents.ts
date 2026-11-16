@@ -4,6 +4,7 @@ import { ConfirmEventTypes, type ConfirmStateChangedEvent } from '@ayni.org/cred
 import { LinkSessionEventTypes, type LinkSessionStateChangedEvent } from '@ayni.org/credo-ts-didcomm-link-session'
 import { NotifyEventTypes, type NotifyNotificationReceivedEvent } from '@ayni.org/credo-ts-didcomm-notify'
 import {
+  type PeerStatusAuthenticateReceivedEvent,
   PeerStatusEventTypes,
   type PeerStatusQueryReceivedEvent,
   type PeerStatusReceivedEvent,
@@ -29,6 +30,7 @@ export const AYNI_FLOW_EVENT = {
   notificationReceived: 'didcomm.notify.notification-received',
   peerStatusReceived: 'didcomm.peer-status.status-received',
   peerStatusQueryReceived: 'didcomm.peer-status.query-received',
+  peerStatusAuthenticateReceived: 'didcomm.peer-status.authenticate-received',
 } as const
 
 export type AyniFlowEventType = (typeof AYNI_FLOW_EVENT)[keyof typeof AYNI_FLOW_EVENT]
@@ -97,4 +99,14 @@ export const ayniFlowEvents = (agent: VsAgent<any>, logger: BaseLogger) => {
       answered: payload.answered,
     })
   })
+  // a peer asks to be asked for its credential (CC-VSA-013): the controller opens the `authenticate` flow
+  agent.events.on(
+    PeerStatusEventTypes.PeerStatusAuthenticateReceived,
+    ({ payload }: PeerStatusAuthenticateReceivedEvent) => {
+      emitModuleMessageEvent(agent, AYNI_FLOW_EVENT.peerStatusAuthenticateReceived, {
+        messageId: payload.messageId,
+        connectionId: payload.connectionId,
+      })
+    }
+  )
 }

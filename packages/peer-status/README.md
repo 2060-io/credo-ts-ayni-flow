@@ -32,6 +32,8 @@ await agent.modules.peerStatus.send({
 |---|---|---|
 | `authentication.rule` | `none`, `optional`, `required` | nothing asked; a credential the peer may present; one it must present before anything opens |
 | `authentication.credential` | the schema asked for; absent with `none` | which credential identifies the peer |
+| `authentication.issuers` | organization keys; absent when any accredited issuer is accepted | the organizations whose credentials the notifier accepts |
+| `authentication.obtain` | `{ text?, url? }`; absent when the notifier says nothing of it | how the peer obtains a credential the notifier accepts, in the notifier's words |
 | `identified` | boolean | whether the notifier holds a valid identity for the peer |
 | `open` | names | what the peer may use on the connection now (`ag-ui`; `a2a` and `chat` are reserved) |
 | `refusal` | `{ code, comment? }` | the notifier does not serve the peer; `open` is then empty |
@@ -40,6 +42,12 @@ The **receiver** gets a `PeerStatusReceived` event and finds the last status of 
 `findByConnectionId(connectionId)`, in `received`. A receiver that holds none asks with `query({ connectionId })`:
 the notifier's module answers with the status it last sent, and when it has sent none yet, the first one it sends is
 the answer.
+
+A receiver that is not identified, with a notifier whose rule is `optional`, asks to be asked for its credential
+when the person wishes: `authenticate({ connectionId })`. The notifier gets a `PeerStatusAuthenticateReceived`
+event and answers by opening an `authenticate` flow (profile §6.14); the module answers nothing by itself.
+
+Refusal codes: `untrusted`, `not-admitted`, `authentication-declined`, `authentication-unanswered`.
 
 ## Roles
 

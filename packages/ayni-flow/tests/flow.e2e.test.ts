@@ -143,6 +143,37 @@ describe('ayni-flow/1.0 between a service and a holder', () => {
     expect(serviceRecord.closedBy).toBe('peer')
   })
 
+  it('takes an authenticate flow, and learns why a presentation was not accepted (§6.14)', async () => {
+    const record = await service.modules.ayniFlow.openFlow({
+      connectionId: serviceConnection.id,
+      kind: AyniFlowKind.Authenticate,
+      title: 'Authenticate to Acme',
+      origin: { channel: 'none' },
+      expiresTime: inAnHour(),
+    })
+    // the holder takes the kind: the flow waits for the person, it is not refused
+    const pending = (await stateChanged(holder, AyniFlowState.Pending, record.flowId)).payload.flowRecord
+    expect(pending.kind).toBe('authenticate')
+
+    // the service verified a presentation it does not accept: it says why, and the flow ends there
+    const failedOnHolder = stateChanged(holder, AyniFlowState.Failed, record.flowId)
+    await service.modules.ayniFlow.sendProblemReport({
+      flowId: record.flowId,
+      code: AyniFlowErrorCode.IssuerNotAccepted,
+      description: 'This service does not accept badges of this organization.',
+    })
+    const holderRecord = (await failedOnHolder).payload.flowRecord
+    expect(holderRecord.errorCode).toBe('issuer-not-accepted')
+    expect(holderRecord.reason).toBe('This service does not accept badges of this organization.')
+    expect(holderRecord.closedBy).toBe('peer')
+    expect([
+      AyniFlowErrorCode.IssuerNotAccepted,
+      AyniFlowErrorCode.NotValid,
+      AyniFlowErrorCode.Incomplete,
+      AyniFlowErrorCode.AnotherIdentity,
+    ]).toEqual(['issuer-not-accepted', 'not-valid', 'incomplete', 'another-identity'])
+  })
+
   it('refuses an unsupported kind with a problem report and records the refusal', async () => {
     const failedOnService = stateChanged(service, AyniFlowState.Failed)
     const failedOnHolder = stateChanged(holder, AyniFlowState.Failed)

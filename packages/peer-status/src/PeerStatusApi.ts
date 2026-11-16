@@ -2,7 +2,7 @@ import { AgentContext, CredoError, injectable } from '@credo-ts/core'
 import { DidCommConnectionService, DidCommMessageSender, getOutboundDidCommMessageContext } from '@credo-ts/didcomm'
 
 import type { PeerStatus } from './fields'
-import { PeerStatusQueryMessage, PeerStatusStatusMessage } from './messages'
+import { PeerStatusAuthenticateMessage, PeerStatusQueryMessage, PeerStatusStatusMessage } from './messages'
 import { PeerStatusModuleConfig } from './PeerStatusModuleConfig'
 import { type PeerStatusRecord, PeerStatusRepository } from './repository'
 import { validateStatus } from './validation'
@@ -52,6 +52,21 @@ export class PeerStatusApi {
     connectionRecord.assertReady()
 
     const message = new PeerStatusQueryMessage()
+    const outbound = await getOutboundDidCommMessageContext(this.agentContext, { message, connectionRecord })
+    await this.messageSender.sendMessage(outbound)
+    return { messageId: message.id }
+  }
+
+  /**
+   * Asks the peer to ask for this agent's credential (FLOW-STAT-009): for a receiver that is not identified, when
+   * the person wishes. The peer answers by opening an `authenticate` flow. Returns the message id.
+   */
+  public async authenticate(options: { connectionId: string }): Promise<{ messageId: string }> {
+    if (!this.config.isReceiver) throw new CredoError('peer-status: this agent is not a receiver')
+    const connectionRecord = await this.connectionService.getById(this.agentContext, options.connectionId)
+    connectionRecord.assertReady()
+
+    const message = new PeerStatusAuthenticateMessage()
     const outbound = await getOutboundDidCommMessageContext(this.agentContext, { message, connectionRecord })
     await this.messageSender.sendMessage(outbound)
     return { messageId: message.id }
