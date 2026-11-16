@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.6](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-peer-status@v0.1.5...credo-ts-didcomm-peer-status@v0.1.6) (2026-11-16)
+
+
+### Features
+
+* authentication of a person: status fields, the authenticate message and the authenticate flow kind ([2348501](https://github.com/2060-io/credo-ts-ayni-flow/commit/23485018ca40c4ca8c01904e8e8f0bd36fa9c916))
+* the authentication of a person: organizations accepted and how to obtain the credential in the status, the authenticate message, the authenticate flow kind ([35f353b](https://github.com/2060-io/credo-ts-ayni-flow/commit/35f353bd5400c5a3d493e07f38fe1598c13f481f))
+
 ## [0.1.5](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-peer-status@v0.1.4...credo-ts-didcomm-peer-status@v0.1.5) (2026-11-15)
 
 

@@ -1,12 +1,12 @@
 {
-  "packages/ayni-flow": "0.1.5",
-  "packages/authorize": "0.1.5",
-  "packages/confirm": "0.1.5",
-  "packages/link-session": "0.1.5",
-  "packages/session-grant": "0.1.5",
-  "packages/sign-tx": "0.1.5",
-  "packages/notify": "0.1.5",
-  "packages/reissue": "0.1.5",
-  "packages/peer-status": "0.1.5",
-  "packages/vs-agent-plugin": "0.1.5"
+  "packages/ayni-flow": "0.1.6",
+  "packages/authorize": "0.1.6",
+  "packages/confirm": "0.1.6",
+  "packages/link-session": "0.1.6",
+  "packages/session-grant": "0.1.6",
+  "packages/sign-tx": "0.1.6",
+  "packages/notify": "0.1.6",
+  "packages/reissue": "0.1.6",
+  "packages/peer-status": "0.1.6",
+  "packages/vs-agent-plugin": "0.1.6"
 }
