@@ -249,6 +249,30 @@ describe('Admin API and webhook events, service to holder', () => {
       })
     ).rejects.toThrow(/empty with a refusal/)
   })
+
+  it('says which organizations it accepts and how the credential is obtained, and relays a guest who asks to authenticate (CC-VSA-013)', async () => {
+    const peerStatus = new V2DidcommPeerStatusController(service as any)
+    const status = {
+      authentication: {
+        rule: 'optional' as const,
+        credential: { jsonSchemaCredentialId: 'https://ecs.example/vt/schemas-badge-jsc.json' },
+        issuers: ['org:EE:12345678'],
+        obtain: { text: 'Ask the Acme front desk for your badge.', url: 'https://acme.example/badge' },
+      },
+      identified: false,
+      open: ['ag-ui'],
+    }
+    const told = waitForEvent(holder, 'PeerStatusReceived' as any)
+    await peerStatus.send({ connectionId: serviceConnectionId, status })
+    expect(((await told) as any).payload.status).toEqual(status)
+
+    const asked = waitForEvent(service, 'PeerStatusAuthenticateReceived' as any)
+    const holderConnection = (await holder.didcomm.connections.getAll())[0]
+    const { messageId } = await holder.modules.peerStatus.authenticate({ connectionId: holderConnection.id })
+    await asked
+    const event = webhook.find((e) => e.type === AYNI_FLOW_EVENT.peerStatusAuthenticateReceived)
+    expect(event?.data).toEqual({ connectionId: serviceConnectionId, messageId })
+  })
 })
 
 describe('peer-status between two services, as webhook events', () => {

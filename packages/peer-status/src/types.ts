@@ -17,6 +17,7 @@ export enum PeerStatusRole {
 export enum PeerStatusEventTypes {
   PeerStatusReceived = 'PeerStatusReceived',
   PeerStatusQueryReceived = 'PeerStatusQueryReceived',
+  PeerStatusAuthenticateReceived = 'PeerStatusAuthenticateReceived',
 }
 
 /** Emitted for every `status` received; the status replaces `previous` (FLOW-STAT-005). */
@@ -40,6 +41,15 @@ export interface PeerStatusQueryReceivedEvent extends BaseEvent {
   payload: {
     connectionId: string
     answered: boolean
+    messageId: string
+  }
+}
+
+/** Emitted for every `authenticate` received: the peer asks to be asked for its credential (FLOW-STAT-009). */
+export interface PeerStatusAuthenticateReceivedEvent extends BaseEvent {
+  type: typeof PeerStatusEventTypes.PeerStatusAuthenticateReceived
+  payload: {
+    connectionId: string
     messageId: string
   }
 }

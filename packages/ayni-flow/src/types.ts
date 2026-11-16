@@ -40,6 +40,8 @@ export enum AyniFlowKind {
   Reissue = 'reissue',
   Revoked = 'revoked',
   IdentifyUa = 'identify-ua',
+  /** The presentation by which a person authenticates to a service (§6.14). */
+  Authenticate = 'authenticate',
 }
 
 /** Kinds the holder answers by default: every kind of §6 but `identify-ua`, deferred with app D8 (matrix row 28). */
@@ -72,6 +74,11 @@ export enum AyniFlowErrorCode {
   UnknownReference = 'unknown-reference',
   NotAccepted = 'not-accepted',
   NotFlowCapable = 'not-flow-capable',
+  /** A presentation in an `authenticate` flow that the service does not accept (§6.14); the service asks again. */
+  IssuerNotAccepted = 'issuer-not-accepted',
+  NotValid = 'not-valid',
+  Incomplete = 'incomplete',
+  AnotherIdentity = 'another-identity',
 }
 
 /** Who closed the flow, kept on the record for History. */

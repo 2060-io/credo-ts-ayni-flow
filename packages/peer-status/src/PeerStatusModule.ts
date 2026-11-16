@@ -1,7 +1,7 @@
 import type { AgentContext, DependencyManager, Module } from '@credo-ts/core'
 
 import { DidCommFeatureRegistry, DidCommMessageHandlerRegistry, DidCommProtocol } from '@credo-ts/didcomm'
-import { PeerStatusQueryHandler, PeerStatusStatusHandler } from './handlers'
+import { PeerStatusAuthenticateHandler, PeerStatusQueryHandler, PeerStatusStatusHandler } from './handlers'
 import { PEER_STATUS_PROTOCOL_URI } from './messages'
 import { PeerStatusApi } from './PeerStatusApi'
 import { PeerStatusModuleConfig, type PeerStatusModuleConfigOptions } from './PeerStatusModuleConfig'
@@ -26,7 +26,11 @@ export class PeerStatusModule implements Module {
     const messageHandlerRegistry = agentContext.dependencyManager.resolve(DidCommMessageHandlerRegistry)
     const featureRegistry = agentContext.dependencyManager.resolve(DidCommFeatureRegistry)
 
-    messageHandlerRegistry.registerMessageHandlers([new PeerStatusStatusHandler(), new PeerStatusQueryHandler()])
+    messageHandlerRegistry.registerMessageHandlers([
+      new PeerStatusStatusHandler(),
+      new PeerStatusQueryHandler(),
+      new PeerStatusAuthenticateHandler(),
+    ])
     featureRegistry.register(new DidCommProtocol({ id: PEER_STATUS_PROTOCOL_URI, roles: this.config.roles }))
   }
 }
