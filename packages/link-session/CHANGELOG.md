@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.7](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-link-session@v0.1.6...credo-ts-didcomm-link-session@v0.1.7) (2026-11-17)
+
+
+### Bug Fixes
+
+* **deps:** the packages run on the Credo build of VS Agent 2.0.0-dev.113 ([4b4687d](https://github.com/2060-io/credo-ts-ayni-flow/commit/4b4687d925e2b7e83f15ae1b5aee9e2cc855e767))
+* **deps:** the packages run on the Credo build of VS Agent 2.0.0-dev.113 (0.8.0-alpha-20261106194154) ([ec29d81](https://github.com/2060-io/credo-ts-ayni-flow/commit/ec29d81773713b5798a60fdf31bd90d53a132dad))
+
 ## [0.1.6](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-link-session@v0.1.5...credo-ts-didcomm-link-session@v0.1.6) (2026-11-16)
 
 
