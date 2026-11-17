@@ -2,17 +2,17 @@ packages:
   - 'packages/*'
 
 catalog:
-  '@credo-ts/askar': 0.8.0-pr-2704-20261029165313
-  '@credo-ts/core': 0.8.0-pr-2704-20261029165313
-  '@credo-ts/didcomm': 0.8.0-pr-2704-20261029165313
-  '@credo-ts/node': 0.8.0-pr-2704-20261029165313
+  '@credo-ts/askar': 0.8.0-alpha-20261106194154
+  '@credo-ts/core': 0.8.0-alpha-20261106194154
+  '@credo-ts/didcomm': 0.8.0-alpha-20261106194154
+  '@credo-ts/node': 0.8.0-alpha-20261106194154
   '@openwallet-foundation/askar-nodejs': 0.6.1
   '@openwallet-foundation/askar-shared': 0.6.1
   'class-transformer': 0.5.1
   'class-validator': ^0.14.3
   'tsyringe': ^4.10.0
-  '@verana-labs/vs-agent-sdk': 2.0.0-dev.102
-  '@verana-labs/vs-agent-model': 2.0.0-dev.102
+  '@verana-labs/vs-agent-sdk': 2.0.0-dev.113
+  '@verana-labs/vs-agent-model': 2.0.0-dev.113
   '@nestjs/common': ^10.4.0
   '@nestjs/swagger': ^8.1.0
 
@@ -27,9 +27,14 @@ allowBuilds:
 
 # vs-agent-sdk pins its own Credo snapshot; the workspace runs one Credo instance, the catalog one
 overrides:
-  '@credo-ts/core': 0.8.0-pr-2704-20261029165313
-  '@credo-ts/didcomm': 0.8.0-pr-2704-20261029165313
-  '@credo-ts/askar': 0.8.0-pr-2704-20261029165313
-  '@credo-ts/anoncreds': 0.8.0-pr-2704-20261029165313
-  '@credo-ts/webvh': 0.8.0-pr-2704-20261029165313
-  '@credo-ts/node': 0.8.0-pr-2704-20261029165313
+  '@credo-ts/core': 0.8.0-alpha-20261106194154
+  '@credo-ts/didcomm': 0.8.0-alpha-20261106194154
+  '@credo-ts/askar': 0.8.0-alpha-20261106194154
+  '@credo-ts/anoncreds': 0.8.0-alpha-20261106194154
+  '@credo-ts/webvh': 0.8.0-alpha-20261106194154
+  '@credo-ts/node': 0.8.0-alpha-20261106194154
+
+minimumReleaseAgeExclude:
+  - '@verana-labs/credo-ts-didcomm-vt-flow@2.0.0-dev.113'
+  - '@verana-labs/vs-agent-model@2.0.0-dev.113'
+  - '@verana-labs/vs-agent-sdk@2.0.0-dev.113'
