@@ -42,8 +42,8 @@
     "@ayni.org/credo-ts-didcomm-sign-tx": "workspace:^"
   },
   "peerDependencies": {
-    "@credo-ts/core": ">=0.8.0-pr-2704-20261026000000 <0.9.0",
-    "@credo-ts/didcomm": ">=0.8.0-pr-2704-20261026000000 <0.9.0",
+    "@credo-ts/core": ">=0.8.0-alpha-20261106194154 <0.9.0",
+    "@credo-ts/didcomm": ">=0.8.0-alpha-20261106194154 <0.9.0",
     "@nestjs/common": "^10.0.0",
     "@nestjs/swagger": "^8.0.0",
     "@verana-labs/vs-agent-sdk": ">=2.0.0-dev.100",

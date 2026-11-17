@@ -29,10 +29,11 @@ provide (present-proof 2.0, issue-credential 2.0, mrtd 1.0, calls 1.0, revocatio
 
 ## Credo-TS line
 
-The packages run on the Credo-TS **0.8.0 PR 2704 snapshot line** (`@credo-ts/core` and `@credo-ts/didcomm`
-`0.8.0-pr-2704-*`), the one VS Agent and the Ayni app pin; the exact snapshot the repo tests against is in
-[`pnpm-workspace.yaml`](pnpm-workspace.yaml) (`catalog`). The peer dependency range accepts any snapshot of that line
-from 2026-10-26 on, and the 0.8.0 release once Credo publishes it. DIDComm v1 only.
+The packages run on the Credo-TS **0.8.0 alpha line** (`@credo-ts/core` and `@credo-ts/didcomm`
+`0.8.0-alpha-*`), on the build VS Agent pins, which the Ayni app pins too; the exact build the repo tests against is
+in [`pnpm-workspace.yaml`](pnpm-workspace.yaml) (`catalog`), with the VS Agent SDK of the same release. The peer
+dependency range accepts that build and every later one of 0.8.0, and the 0.8.0 release once Credo publishes it.
+DIDComm v1 only.
 
 ## Usage
 
