@@ -94,6 +94,25 @@ describe('ayni-flow/1.0 between a service and a holder', () => {
     expect(serviceRecord.closedAt).toBeInstanceOf(Date)
   })
 
+  it("gives the holder the open's link, with an origin of none (FLOW-CORE-011, FLOW-AUTH-003)", async () => {
+    const link = 'https://app.dev.ayni.org/app/service/did:webvh:acme/notifications?approval=apr_7'
+    const pendingOnHolder = stateChanged(holder, AyniFlowState.Pending)
+    const record = await service.modules.ayniFlow.openFlow({
+      connectionId: serviceConnection.id,
+      kind: AyniFlowKind.Authorize,
+      title: 'Ana asks to run Purge',
+      origin: { channel: 'none' },
+      expiresTime: inAnHour(),
+      link,
+    })
+    expect(record.link).toBe(link)
+    const holderRecord = (await pendingOnHolder).payload.flowRecord
+    expect(holderRecord.flowId).toBe(record.flowId)
+    expect(holderRecord.link).toBe(link)
+    expect(holderRecord.origin).toEqual({ channel: 'none' })
+    await service.modules.ayniFlow.closeFlow({ flowId: record.flowId, outcome: 'cancelled' })
+  })
+
   it('ignores a second close of a closed flow and keeps the first outcome', async () => {
     const record = await service.modules.ayniFlow.openFlow({
       connectionId: serviceConnection.id,

@@ -107,6 +107,10 @@ discloses the protocol with the roles you configure. A malformed message receive
 - **`session-grant`**: the agent side refuses to send a grant valid for more than sixty seconds; the holder side tolerates
   thirty seconds of clock skew when it checks a received one.
 - **`notify`** keeps no record: one message, one event.
+- **`open.link`** (profile §5.1, FLOW-CORE-011): an optional app link the service names and the holder offers on the
+  request's sheet, which navigates and never acts; the `authorize` flow of an approval of someone else's request links to
+  the Notifications that list it, with `origin: { channel: 'none' }` (FLOW-AUTH-003). `openFlow` takes it, the `open`
+  carries it, and both records keep it as `link`.
 - **`reissue`** has no response message; `markAnswered` records on either side that an `issue` flow or a problem report
   answered the request.
 

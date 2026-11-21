@@ -69,6 +69,37 @@ describe('ayni-flow/1.0 messages', () => {
     expect(message.expiresTime?.toISOString()).toBe('2026-10-24T15:32:00.000Z')
   })
 
+  it('carries the link of an open, an app link the holder offers on the sheet (FLOW-CORE-011)', () => {
+    const link = 'https://app.dev.ayni.org/app/service/did:webvh:acme/spaces/spc_1/notifications?approval=apr_1'
+    const message = new AyniFlowOpenMessage({
+      id: 'f1ow-link',
+      kind: 'authorize',
+      title: 'Ana asks to run Post on X',
+      origin: { channel: 'none' },
+      expiresTime: new Date('2026-11-21T22:00:00Z'),
+      link,
+    })
+    expect(JsonTransformer.toJSON(message)).toMatchObject({ link, origin: { channel: 'none' } })
+    const parsed = JsonTransformer.fromJSON(JsonTransformer.toJSON(message), AyniFlowOpenMessage)
+    MessageValidator.validateSync(parsed)
+    expect(parsed.link).toBe(link)
+    // an open without one has none
+    const without = new AyniFlowOpenMessage({
+      kind: 'present',
+      title: 't',
+      origin: { channel: 'none' },
+      expiresTime: new Date('2026-11-21T22:00:00Z'),
+    })
+    expect(JsonTransformer.toJSON(without).link).toBeUndefined()
+    // a link that is not a string does not validate
+    expect(() =>
+      JsonTransformer.fromJSON(
+        { '@type': AYNI_FLOW_OPEN_TYPE, '@id': 'f1ow-3', kind: 'present', link: 42 },
+        AyniFlowOpenMessage
+      )
+    ).toThrow()
+  })
+
   it('parses an open missing its required fields so that the service can refuse it as malformed', () => {
     const message = JsonTransformer.fromJSON(
       { '@type': AYNI_FLOW_OPEN_TYPE, '@id': 'f1ow-2', kind: 'present' },
