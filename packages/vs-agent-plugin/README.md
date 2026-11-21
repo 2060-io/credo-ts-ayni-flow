@@ -36,7 +36,7 @@ npm audit signatures
 
 | Route | Does |
 |-------|------|
-| `POST /v2/didcomm/ayni-flow/flows` | open a flow; returns `flowId` |
+| `POST /v2/didcomm/ayni-flow/flows` | open a flow (`kind`, `title`, `origin`, `expiresTime`; optional `description`, `requires`, `steps` and `link`, an app link of at most 2048 characters the holder offers on its sheet); returns `flowId` |
 | `GET /v2/didcomm/ayni-flow/flows[/{flowId}]` | list or read flows |
 | `POST /v2/didcomm/ayni-flow/flows/{flowId}/close` | close with `outcome`, `reason`, `references` |
 | `POST /v2/didcomm/ayni-flow/flows/{flowId}/problem-report` | refuse or fail with a §11 code |
