@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/2060-io/credo-ts-ayni-flow/compare/vs-agent-plugin-ayni-flow@v0.1.7...vs-agent-plugin-ayni-flow@v0.1.8) (2026-11-21)
+
+
+### Miscellaneous Chores
+
+* **vs-agent-plugin-ayni-flow:** Synchronize ayni-flow versions
+
 ## [0.1.7](https://github.com/2060-io/credo-ts-ayni-flow/compare/vs-agent-plugin-ayni-flow@v0.1.6...vs-agent-plugin-ayni-flow@v0.1.7) (2026-11-17)
 
 
