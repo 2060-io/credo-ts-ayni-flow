@@ -36,6 +36,8 @@ export interface AyniFlowStorageProps {
   origin: AyniFlowOriginOptions
   expiresTime: Date
   requires?: string[]
+  /** The `open`'s app link, which the holder offers on the request's sheet (FLOW-CORE-011). */
+  link?: string
   steps?: AyniFlowStepOptions[]
 
   reason?: string
@@ -68,6 +70,8 @@ export class AyniFlowRecord extends BaseRecord<DefaultAyniFlowTags, CustomAyniFl
   public expiresTime!: Date
 
   public requires?: string[]
+  /** The `open`'s app link (profile §5.1): the holder offers it on the request's sheet, and it navigates, never acts. */
+  public link?: string
   public steps?: AyniFlowStepOptions[]
 
   /** `close.reason`, or the `description.en` of the problem report that failed the flow. */
@@ -98,6 +102,7 @@ export class AyniFlowRecord extends BaseRecord<DefaultAyniFlowTags, CustomAyniFl
       this.origin = props.origin
       this.expiresTime = props.expiresTime
       this.requires = props.requires
+      this.link = props.link
       this.steps = props.steps
       this.reason = props.reason
       this.references = props.references

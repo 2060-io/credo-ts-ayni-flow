@@ -14,6 +14,8 @@ export interface AyniFlowOpenMessageOptions {
   origin: AyniFlowOriginOptions
   expiresTime: Date
   requires?: string[]
+  /** An app link to the place where the person reads more of the request (profile §5.1, FLOW-CORE-011). */
+  link?: string
   steps?: AyniFlowStepOptions[]
 }
 
@@ -35,6 +37,7 @@ export class AyniFlowOpenMessage extends DidCommMessage {
       this.origin = new AyniFlowOrigin(options.origin)
       this.expiresTime = options.expiresTime
       this.requires = options.requires
+      this.link = options.link
       this.steps = options.steps?.map((step) => new AyniFlowStep(step))
     }
   }
@@ -70,6 +73,15 @@ export class AyniFlowOpenMessage extends DidCommMessage {
   @IsArray()
   @IsString({ each: true })
   public requires?: string[]
+
+  /**
+   * An app link on the network's app-link domain (AG-UI profile §10) to the place where the person reads more of the
+   * request, such as the Notifications that list an approval (FLOW-AUTH-003). The holder offers it on the request's
+   * sheet; it navigates, never acts (FLOW-CORE-011).
+   */
+  @IsOptional()
+  @IsString()
+  public link?: string
 
   @IsOptional()
   @IsArray()
