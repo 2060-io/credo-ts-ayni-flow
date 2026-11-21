@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-notify@v0.1.7...credo-ts-didcomm-notify@v0.1.8) (2026-11-21)
+
+
+### Miscellaneous Chores
+
+* **credo-ts-didcomm-notify:** Synchronize ayni-flow versions
+
 ## [0.1.7](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-notify@v0.1.6...credo-ts-didcomm-notify@v0.1.7) (2026-11-17)
 
 

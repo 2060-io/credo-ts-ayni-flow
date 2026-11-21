@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.8](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-ayni-flow@v0.1.7...credo-ts-didcomm-ayni-flow@v0.1.8) (2026-11-21)
+
+
+### Features
+
+* **ayni-flow:** an open may carry a link, an app link the holder offers on the request's sheet (FLOW-CORE-011) ([58ee6fb](https://github.com/2060-io/credo-ts-ayni-flow/commit/58ee6fb9fdbca59d8ce1cc1f950476f410a0c369))
+* **ayni-flow:** an open may carry a link, an app link the holder offers on the request's sheet (FLOW-CORE-011) ([ce4e285](https://github.com/2060-io/credo-ts-ayni-flow/commit/ce4e285315d1d275332e6366099ed71771839760))
+
 ## [0.1.7](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-ayni-flow@v0.1.6...credo-ts-didcomm-ayni-flow@v0.1.7) (2026-11-17)
 
 
