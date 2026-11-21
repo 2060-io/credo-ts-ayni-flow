@@ -12,6 +12,8 @@ import { AyniFlowRole, AyniFlowState } from '@ayni.org/credo-ts-didcomm-ayni-flo
 import { PeerStatusRole } from '@ayni.org/credo-ts-didcomm-peer-status'
 import { ReissueRole } from '@ayni.org/credo-ts-didcomm-reissue'
 import { ConsoleLogger, LogLevel } from '@credo-ts/core'
+import type { ValidationPipe } from '@nestjs/common'
+import { PIPES_METADATA } from '@nestjs/common/constants'
 import { VsAgentEventTypes } from '@verana-labs/vs-agent-sdk'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -20,6 +22,8 @@ import {
   AyniFlowPlugin,
   ayniFlowEvents,
   createVsAgentPlugin,
+  FLOW_LINK_MAX_LENGTH,
+  OpenFlowBodyDto,
   setupAyniFlowProtocols,
   V2DidcommAuthorizeController,
   V2DidcommAyniFlowController,
@@ -184,6 +188,39 @@ describe('Admin API and webhook events, service to holder', () => {
       flowId: flow.flowId,
       response: { decision: 'approved' },
     })
+  })
+
+  it("takes an open's link through the route's validation: on the record, the answer, the webhook and the holder (FLOW-CORE-011)", async () => {
+    const flows = new V2DidcommAyniFlowController(service as any)
+    // the pipe of the route itself, as Nest runs it on the body before the controller
+    const [pipe] = Reflect.getMetadata(PIPES_METADATA, V2DidcommAyniFlowController) as ValidationPipe[]
+    const validate = (body: Record<string, unknown>) =>
+      pipe.transform(body, { type: 'body', metatype: OpenFlowBodyDto, data: '' }) as Promise<OpenFlowBodyDto>
+    const link = `https://app.dev.ayni.org/app/service/did:webvh:acme/spaces/spc_1/notifications?approval=apr_1`
+    const body = {
+      connectionId: serviceConnectionId,
+      kind: 'authorize',
+      title: 'Ana asks to run Post on X',
+      origin: { channel: 'none' },
+      expiresTime: new Date(Date.now() + 60_000).toISOString(),
+      link,
+    }
+    const onHolder = waitForEvent(holder, 'AyniFlowStateChanged' as any, (e: any) => e.payload.flowRecord.link === link)
+    const flow = await flows.open(await validate(body))
+    expect(flow.link).toBe(link)
+    expect((await flows.get(flow.flowId)).link).toBe(link)
+    expect(((await onHolder) as any).payload.flowRecord).toMatchObject({ flowId: flow.flowId, link })
+    const event = webhook.find((e) => e.type === AYNI_FLOW_EVENT.flowStateChanged && e.data.flowId === flow.flowId)
+    expect(event?.data.link).toBe(link)
+    await flows.close(flow.flowId, { outcome: 'cancelled' })
+    // a link that is not a string, or longer than an app link may be, is refused before anything is sent
+    await expect(validate({ ...body, link: 42 })).rejects.toThrow()
+    await expect(
+      validate({ ...body, link: `https://app.dev.ayni.org/app/${'a'.repeat(FLOW_LINK_MAX_LENGTH)}` })
+    ).rejects.toThrow()
+    // and so is a field the route does not declare, which is why a link needed one
+    await expect(validate({ ...body, other: 'x' })).rejects.toThrow()
+    await expect(validate({ ...body, link: undefined })).resolves.toMatchObject({ kind: 'authorize' })
   })
 
   it("relays the holder's problem report as a failed flow with the code (CC-VSA-010)", async () => {
