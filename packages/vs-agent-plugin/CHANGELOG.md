@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.9](https://github.com/2060-io/credo-ts-ayni-flow/compare/vs-agent-plugin-ayni-flow@v0.1.8...vs-agent-plugin-ayni-flow@v0.1.9) (2026-11-21)
+
+
+### Features
+
+* **vs-agent-plugin:** POST /didcomm/ayni-flow/flows takes the open's link, and every flow it returns names it (FLOW-CORE-011) ([f0c8831](https://github.com/2060-io/credo-ts-ayni-flow/commit/f0c8831548488173c8222178a30cfc5fded11e4b))
+* **vs-agent-plugin:** POST /didcomm/ayni-flow/flows takes the open's link, and every flow it returns names it (FLOW-CORE-011) ([09d02c8](https://github.com/2060-io/credo-ts-ayni-flow/commit/09d02c82967c868e2ac841855aaae45fcf2f2598))
+
 ## [0.1.8](https://github.com/2060-io/credo-ts-ayni-flow/compare/vs-agent-plugin-ayni-flow@v0.1.7...vs-agent-plugin-ayni-flow@v0.1.8) (2026-11-21)
 
 
