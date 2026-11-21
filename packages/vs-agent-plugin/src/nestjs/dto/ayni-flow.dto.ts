@@ -1,7 +1,20 @@
 import type { AyniFlowRecord } from '@ayni.org/credo-ts-didcomm-ayni-flow'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { Type } from 'class-transformer'
-import { IsArray, IsIn, IsISO8601, IsNotEmpty, IsObject, IsOptional, IsString, ValidateNested } from 'class-validator'
+import {
+  IsArray,
+  IsIn,
+  IsISO8601,
+  IsNotEmpty,
+  IsObject,
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateNested,
+} from 'class-validator'
+
+/** The longest `link` an `open` takes: an app link is a path of a few segments and one parameter (FLOW-CORE-011). */
+export const FLOW_LINK_MAX_LENGTH = 2048
 
 export class FlowClientDto {
   @ApiProperty({ example: 'Firefox on Linux' })
@@ -103,6 +116,17 @@ export class OpenFlowBodyDto {
   @IsString({ each: true })
   requires?: string[]
 
+  @ApiPropertyOptional({
+    description:
+      "An app link the holder offers on the request's sheet, to the place where the person reads more of it; it navigates, never acts (flow profile §5.1, FLOW-CORE-011)",
+    example: 'https://app.dev.ayni.org/app/service/did:webvh:acme/notifications?approval=apr_1',
+    maxLength: FLOW_LINK_MAX_LENGTH,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(FLOW_LINK_MAX_LENGTH)
+  link?: string
+
   @ApiPropertyOptional({ type: [FlowStepDto] })
   @IsOptional()
   @IsArray()
@@ -181,6 +205,9 @@ export class FlowDto {
   @ApiPropertyOptional({ type: [String] })
   requires?: string[]
 
+  @ApiPropertyOptional({ description: "The open's app link, offered on the holder's sheet (FLOW-CORE-011)" })
+  link?: string
+
   @ApiPropertyOptional({ type: [FlowStepDto] })
   steps?: FlowStepDto[]
 
@@ -216,6 +243,7 @@ export function toFlowDto(record: AyniFlowRecord): FlowDto {
     origin: record.origin as FlowOriginDto,
     expiresTime: record.expiresTime.toISOString(),
     requires: record.requires,
+    link: record.link,
     steps: record.steps,
     reason: record.reason,
     references: record.references,

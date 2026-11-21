@@ -48,6 +48,7 @@ export class V2DidcommAyniFlowController {
       origin: body.origin,
       expiresTime: new Date(body.expiresTime),
       requires: body.requires,
+      link: body.link,
       steps: body.steps,
     })
     return toFlowDto(record)
