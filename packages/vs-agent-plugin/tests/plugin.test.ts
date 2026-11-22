@@ -8,7 +8,7 @@ import {
   waitForEvent,
 } from '@ayni.org/credo-ts-ayni-test-utils'
 import { AuthorizeRole, AuthorizeState } from '@ayni.org/credo-ts-didcomm-authorize'
-import { AyniFlowRole, AyniFlowState } from '@ayni.org/credo-ts-didcomm-ayni-flow'
+import { AyniFlowClosedError, AyniFlowRole, AyniFlowState } from '@ayni.org/credo-ts-didcomm-ayni-flow'
 import { PeerStatusRole } from '@ayni.org/credo-ts-didcomm-peer-status'
 import { ReissueRole } from '@ayni.org/credo-ts-didcomm-reissue'
 import { ConsoleLogger, LogLevel } from '@credo-ts/core'
@@ -249,6 +249,44 @@ describe('Admin API and webhook events, service to holder', () => {
       (e) => e.type === AYNI_FLOW_EVENT.flowStateChanged && e.data.flowId === flow.flowId && e.data.state === 'failed'
     )
     expect(event?.data).toMatchObject({ errorCode: 'summary-mismatch', reason: 'mismatch', closedBy: 'peer' })
+  })
+
+  it('refuses a carrier request and a close in a flow the holder closed, with a 409 (FLOW-CORE-005)', async () => {
+    const flows = new V2DidcommAyniFlowController(service as any)
+    const authorize = new V2DidcommAuthorizeController(service as any)
+    const flow = await flows.open({
+      connectionId: serviceConnectionId,
+      kind: 'authorize',
+      title: 'Ana asks for your approval',
+      origin: { channel: 'none' },
+      expiresTime: new Date(Date.now() + 60_000).toISOString(),
+    })
+    await waitForEvent(holder, 'AyniFlowStateChanged' as any, (e: any) => e.payload.flowRecord.flowId === flow.flowId)
+    const declined = waitForEvent(
+      service,
+      'AyniFlowStateChanged' as any,
+      (e: any) => e.payload.flowRecord.flowId === flow.flowId && e.payload.flowRecord.state === 'declined'
+    )
+    await holder.modules.ayniFlow.closeFlow({ flowId: flow.flowId, outcome: 'declined' })
+    await declined
+
+    // VS Agent's Admin API answers an error with a status of 409 as `409 INVALID_STATE`, with the error's message
+    const request = authorize.request({
+      connectionId: serviceConnectionId,
+      flowId: flow.flowId,
+      request: {
+        requester: { name: 'Ana Ruiz', role: 'Analyst' },
+        purpose: { id: 'customer-support', label: 'Customer support' },
+        justification: 'Ticket 4411 needs the customer address.',
+        scope: ['tool:crm.readCustomer'],
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        attested: false,
+      },
+    })
+    await expect(request).rejects.toBeInstanceOf(AyniFlowClosedError)
+    await expect(request).rejects.toMatchObject({ status: 409, flowId: flow.flowId, state: 'declined' })
+    await expect(flows.close(flow.flowId, { outcome: 'cancelled' })).rejects.toMatchObject({ status: 409 })
+    expect((await flows.get(flow.flowId)).state).toBe('declined')
   })
 
   it('tells the holder where it stands, answers its query, and relays a query as a webhook event (CC-VSA-012)', async () => {

@@ -3,6 +3,7 @@ import type { RecordTags, TagsBase } from '@credo-ts/core'
 import { BaseRecord, CredoError, utils } from '@credo-ts/core'
 import { Type } from 'class-transformer'
 
+import { AyniFlowClosedError } from '../errors'
 import type { AyniFlowOriginOptions, AyniFlowReferenceOptions, AyniFlowStepOptions } from '../models'
 import { AyniFlowClosedBy, AyniFlowRole, AyniFlowState, isAyniFlowClosedState } from '../types'
 
@@ -144,9 +145,7 @@ export class AyniFlowRecord extends BaseRecord<DefaultAyniFlowTags, CustomAyniFl
   }
 
   public assertOpen(): void {
-    if (this.isClosed) {
-      throw new CredoError(`ayni-flow: flow '${this.threadId}' is already closed (${this.state})`)
-    }
+    if (this.isClosed) throw new AyniFlowClosedError(this.threadId, this.state)
   }
 
   public assertState(expected: AyniFlowState | AyniFlowState[]): void {
