@@ -21,6 +21,31 @@ export class SubjectNetwork {
   public subject(name: string): Subject<SubjectMessage> {
     return this.subjects[this.endpoint(name)]
   }
+
+  /**
+   * Runs `send` and returns, in the order they were sent, the messages sent to agent `name` meanwhile, held instead of
+   * delivered: a mediator's queue, for `deliver` to hand over later in any order.
+   */
+  public async hold(name: string, send: () => Promise<unknown>): Promise<SubjectMessage[]> {
+    const endpoint = this.endpoint(name)
+    const live = this.subjects[endpoint]
+    const held: SubjectMessage[] = []
+    const queue = new Subject<SubjectMessage>()
+    queue.subscribe((message) => held.push(message))
+    this.subjects[endpoint] = queue
+    try {
+      await send()
+    } finally {
+      this.subjects[endpoint] = live
+    }
+    return held
+  }
+
+  /** Hands held messages to agent `name` at once, in the order given: its agent processes them concurrently. */
+  public deliver(name: string, messages: SubjectMessage[]): void {
+    const live = this.subject(name)
+    for (const message of messages) live.next(message)
+  }
 }
 
 export interface CreateTestAgentOptions<Modules extends ModulesMap> {

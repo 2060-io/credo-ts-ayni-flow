@@ -6,12 +6,14 @@ import {
   DidCommFeatureRegistry,
   type DidCommInboundMessageContext,
   DidCommMessageHandlerRegistry,
+  DidCommMessageSender,
   DidCommProtocol,
 } from '@credo-ts/didcomm'
 import type { Subject } from 'rxjs'
 
 import { AyniFlowApi } from './AyniFlowApi'
 import { AyniFlowModuleConfig, type AyniFlowModuleConfigOptions } from './AyniFlowModuleConfig'
+import { AyniFlowClosedError } from './errors'
 import { AyniFlowCloseHandler, AyniFlowOpenHandler, AyniFlowProblemReportHandler } from './handlers'
 import {
   AYNI_FLOW_PROTOCOL_URI,
@@ -19,7 +21,7 @@ import {
   AyniFlowOpenMessage,
   AyniFlowProblemReportMessage,
 } from './messages'
-import { AyniFlowRepository } from './repository'
+import { AyniFlowEarlyEndRepository, AyniFlowRepository } from './repository'
 import { AyniFlowService } from './services'
 
 const OWN_MESSAGE_TYPES = new Set([
@@ -28,11 +30,14 @@ const OWN_MESSAGE_TYPES = new Set([
   AyniFlowProblemReportMessage.type.messageTypeUri,
 ])
 
+/** The message senders whose `sendMessage` already refuses carrier messages of closed flows (one per agent). */
+const guardedSenders = new WeakSet<DidCommMessageSender>()
+
 /**
  * Credo module for `https://didcomm.org/ayni-flow/1.0` (Ayni Flow Profile 1.0 §5): handlers for `open`, `close` and the
  * flow's problem reports, the protocol in discover-features with the configured role, a middleware that drops inbound
- * messages of closed or expired flows (FLOW-CORE-004/005), and the `pending` to `active` transition on the first
- * carrier message exchanged (§5.2).
+ * messages of closed or expired flows (FLOW-CORE-004/005), a guard that refuses to send a carrier message in a closed
+ * flow (FLOW-CORE-005), and the `pending` to `active` transition on the first carrier message exchanged (§5.2).
  */
 export class AyniFlowModule implements Module {
   public readonly api = AyniFlowApi
@@ -46,6 +51,7 @@ export class AyniFlowModule implements Module {
     dependencyManager.registerInstance(AyniFlowModuleConfig, this.config)
     dependencyManager.registerContextScoped(AyniFlowApi)
     dependencyManager.registerSingleton(AyniFlowRepository)
+    dependencyManager.registerSingleton(AyniFlowEarlyEndRepository)
     dependencyManager.registerSingleton(AyniFlowService)
   }
 
@@ -64,26 +70,45 @@ export class AyniFlowModule implements Module {
 
     featureRegistry.register(new DidCommProtocol({ id: AYNI_FLOW_PROTOCOL_URI, roles: [this.config.role] }))
 
-    // After a close, and after expiry, messages carrying the flow id are ignored (profile §5.2).
+    // After a close, and after expiry, messages carrying the flow id are ignored (profile §5.2); so are those of a flow
+    // whose close came before its open.
     messageHandlerRegistry.registerMessageHandlerMiddleware(
       async (messageContext: DidCommInboundMessageContext, next: () => Promise<void>) => {
         const flowId = messageContext.message.thread?.parentThreadId
         if (!flowId) return next()
 
-        const record = await service.findByFlowId(messageContext.agentContext, flowId)
-        if (!record) return next()
-
-        if (!record.isClosed && (await service.expireIfDue(messageContext.agentContext, record))) {
-          logger.debug(`ayni-flow: flow '${flowId}' expired; dropping ${messageContext.message.type}`)
-          return
-        }
-        if (record.isClosed) {
-          logger.debug(`ayni-flow: flow '${flowId}' is ${record.state}; dropping ${messageContext.message.type}`)
+        const ended = await service.findEndedState(messageContext.agentContext, flowId, messageContext.connection?.id)
+        if (ended) {
+          logger.debug(`ayni-flow: flow '${flowId}' is ${ended}; dropping ${messageContext.message.type}`)
           return
         }
         return next()
       }
     )
+
+    // No carrier message is sent in a closed flow (FLOW-CORE-005), whichever module sends it: a host's answer throws
+    // `AyniFlowClosedError`, and a response Credo would send to an inbound message is dropped. Credo has no outbound
+    // middleware, so the agent's one message sender is wrapped.
+    const sender = agentContext.dependencyManager.resolve(DidCommMessageSender)
+    if (!guardedSenders.has(sender)) {
+      guardedSenders.add(sender)
+      const sendMessage = sender.sendMessage.bind(sender)
+      sender.sendMessage = async (...[outbound, options]: Parameters<DidCommMessageSender['sendMessage']>) => {
+        const { message } = outbound
+        const flowId = message.thread?.parentThreadId
+        if (flowId && !OWN_MESSAGE_TYPES.has(message.type)) {
+          const ended = await service.findEndedState(outbound.agentContext, flowId, outbound.connection?.id)
+          if (ended) {
+            if (outbound.inboundMessageContext) {
+              logger.debug(`ayni-flow: flow '${flowId}' is ${ended}; not answering with ${message.type}`)
+              return
+            }
+            throw new AyniFlowClosedError(flowId, ended, `${message.type} not sent`)
+          }
+        }
+        return sendMessage(outbound, options)
+      }
+    }
 
     // `pending` becomes `active` when the first carrier message is exchanged, in either direction.
     const activateFromCarrier = async (type: string, parentThreadId: string | undefined) => {

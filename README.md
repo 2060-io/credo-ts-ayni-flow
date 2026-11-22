@@ -84,6 +84,11 @@ the host reacts to those rather than to raw messages. Records are queryable thro
 - enforces `expires_time` (FLOW-CORE-004): a message of an expired flow closes it and is dropped; `expireDueFlows()`
   (or the optional `expiryCheckIntervalMs` timer) closes the others;
 - drops every inbound message that carries the `pthid` of a closed flow (FLOW-CORE-005);
+- takes the messages of one delivery in any order (§5.2, FLOW-CORE-005): a `close` or a problem report received before
+  the flow's `open` is kept, and the `open` records the flow closed; state changes of a flow are made one at a time from
+  a fresh read, so a closed flow never becomes `pending` or `active` again;
+- sends no carrier message in a closed or expired flow, whichever module sends it: the send throws
+  `AyniFlowClosedError` (FLOW-CORE-005), as does closing a closed flow;
 - ignores replays (FLOW-SEC-003).
 
 ### What the carrier modules do
@@ -113,6 +118,14 @@ discloses the protocol with the roles you configure. A malformed message receive
   carries it, and both records keep it as `link`.
 - **`reissue`** has no response message; `markAnswered` records on either side that an `issue` flow or a problem report
   answered the request.
+- **Message order** (FLOW-CORE-005): Credo processes the messages of one delivery concurrently. `AyniFlowService` runs
+  every read-then-write of a flow under a lock per flow, in the agent's process (a host running several processes on
+  one store would need its own serialization). The end of a flow received before its `open` is an
+  `AyniFlowEarlyEndRecord`, consumed by the `open` and otherwise dropped by `expireDueFlows` after a day
+  (`AYNI_FLOW_EARLY_END_RETENTION_MS`). Credo has no outbound middleware, so the module wraps the agent's
+  `DidCommMessageSender.sendMessage` to refuse carrier messages of closed flows; a response Credo would send to an inbound
+  message of such a flow is dropped rather than thrown. `AyniFlowClosedError` has `status` 409, which VS Agent's Admin API
+  answers as `409 INVALID_STATE`.
 
 ## Development
 

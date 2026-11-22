@@ -12,6 +12,7 @@ import { DidCommBasicMessage, DidCommMessageSender, getOutboundDidCommMessageCon
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import {
+  AyniFlowClosedError,
   AyniFlowErrorCode,
   AyniFlowEventTypes,
   AyniFlowKind,
@@ -290,19 +291,35 @@ describe('ayni-flow/1.0 between a service and a holder', () => {
     await activeOnService
     await activeOnHolder
 
+    // a carrier sent while the flow was open, that reaches the holder after the close
+    const late = new DidCommBasicMessage({ content: 'too late' })
+    late.setThread({ threadId: late.id, parentThreadId: record.flowId })
+    const held = await network.hold('holder', async () =>
+      sender.sendMessage(
+        await getOutboundDidCommMessageContext(service$.context, { message: late, connectionRecord: serviceConnection })
+      )
+    )
     const cancelled = stateChanged(holder, AyniFlowState.Cancelled, record.flowId)
     await service.modules.ayniFlow.closeFlow({ flowId: record.flowId, outcome: 'cancelled', reason: 'changed my mind' })
     expect((await cancelled).payload.flowRecord.reason).toBe('changed my mind')
 
-    const late = new DidCommBasicMessage({ content: 'too late' })
-    late.setThread({ threadId: late.id, parentThreadId: record.flowId })
-    await sender.sendMessage(
-      await getOutboundDidCommMessageContext(service$.context, { message: late, connectionRecord: serviceConnection })
-    )
+    network.deliver('holder', held)
     await sleep(500)
     const messages = await holder.didcomm.basicMessages.findAllByQuery({ connectionId: holderConnection.id })
     expect(messages.map((m) => m.content)).toContain('a carrier message standing in for confirm/request')
     expect(messages.map((m) => m.content)).not.toContain('too late')
+
+    // and after its close, the service sends nothing more in the flow (FLOW-CORE-005)
+    const after = new DidCommBasicMessage({ content: 'after the close' })
+    after.setThread({ threadId: after.id, parentThreadId: record.flowId })
+    await expect(
+      sender.sendMessage(
+        await getOutboundDidCommMessageContext(service$.context, {
+          message: after,
+          connectionRecord: serviceConnection,
+        })
+      )
+    ).rejects.toBeInstanceOf(AyniFlowClosedError)
   })
 
   it('expires a flow locally on both ends once expires_time has passed', async () => {
@@ -314,24 +331,30 @@ describe('ayni-flow/1.0 between a service and a holder', () => {
       expiresTime: new Date(Date.now() + 700),
     })
     await stateChanged(holder, AyniFlowState.Pending, record.flowId)
+
+    // a carrier sent before the expiry, that reaches the holder after it
+    const service$ = service as Agent<any>
+    const sender = service$.dependencyManager.resolve(DidCommMessageSender)
+    const carrierOf = async (content: string) => {
+      const carrier = new DidCommBasicMessage({ content })
+      carrier.setThread({ threadId: carrier.id, parentThreadId: record.flowId })
+      return getOutboundDidCommMessageContext(service$.context, {
+        message: carrier,
+        connectionRecord: serviceConnection,
+      })
+    }
+    const held = await network.hold('holder', async () => sender.sendMessage(await carrierOf('after expiry')))
     await sleep(800)
 
     const expiredOnService = await service.modules.ayniFlow.expireDueFlows()
     expect(expiredOnService.map((r) => r.flowId)).toContain(record.flowId)
     expect((await service.modules.ayniFlow.getByFlowId(record.flowId)).state).toBe(AyniFlowState.Expired)
+    // the service sends nothing in the expired flow
+    await expect(sender.sendMessage(await carrierOf('expired'))).rejects.toBeInstanceOf(AyniFlowClosedError)
 
-    // the holder has not run its timer; the next message of the flow expires it on arrival and is dropped
+    // the holder has not run its timer; the late message of the flow expires it on arrival and is dropped
     const expiredOnHolder = stateChanged(holder, AyniFlowState.Expired, record.flowId)
-    const carrier = new DidCommBasicMessage({ content: 'after expiry' })
-    carrier.setThread({ threadId: carrier.id, parentThreadId: record.flowId })
-    const service$ = service as Agent<any>
-    const sender = service$.dependencyManager.resolve(DidCommMessageSender)
-    await sender.sendMessage(
-      await getOutboundDidCommMessageContext(service$.context, {
-        message: carrier,
-        connectionRecord: serviceConnection,
-      })
-    )
+    network.deliver('holder', held)
     const holderRecord = (await expiredOnHolder).payload.flowRecord
     expect(holderRecord.closedBy).toBe('expiry')
     const messages = await holder.didcomm.basicMessages.findAllByQuery({ connectionId: holderConnection.id })
