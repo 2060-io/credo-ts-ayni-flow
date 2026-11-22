@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.10](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-link-session@v0.1.9...credo-ts-didcomm-link-session@v0.1.10) (2026-11-22)
+
+
+### Miscellaneous Chores
+
+* **credo-ts-didcomm-link-session:** Synchronize ayni-flow versions
+
 ## [0.1.9](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-link-session@v0.1.8...credo-ts-didcomm-link-session@v0.1.9) (2026-11-21)
 
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.10](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-ayni-flow@v0.1.9...credo-ts-didcomm-ayni-flow@v0.1.10) (2026-11-22)
+
+
+### Bug Fixes
+
+* **ayni-flow:** a close taken before its flow's open ends the flow, and a closed flow stays closed (FLOW-CORE-005) ([1dc4466](https://github.com/2060-io/credo-ts-ayni-flow/commit/1dc4466cc3a3121b8312a7da45ac4bac50fa7215))
+* **ayni-flow:** a close taken before its flow's open ends the flow, and a closed flow stays closed (FLOW-CORE-005) ([901ebf9](https://github.com/2060-io/credo-ts-ayni-flow/commit/901ebf90f7824a1619724f308078557241e21e7e))
+
 ## [0.1.9](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-ayni-flow@v0.1.8...credo-ts-didcomm-ayni-flow@v0.1.9) (2026-11-21)
 
 
