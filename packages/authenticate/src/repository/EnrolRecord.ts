@@ -52,7 +52,8 @@ export class EnrolRecord extends BaseRecord<DefaultEnrolTags, CustomEnrolTags> {
 
   /**
    * The last challenge, as sent or received. An authenticator app's `secret` and `otpauthUri` are not kept: the event
-   * of the challenge carries them once.
+   * of the challenge carries them once. One sent again after a wrong code keeps its `error` (`wrong-code`) and
+   * `triesLeft` (the codes left).
    */
   public challenge?: EnrolChallenge
   /** How many challenges were sent or received: the first, then one after each wrong code. */

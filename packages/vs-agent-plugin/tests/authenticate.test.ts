@@ -391,6 +391,38 @@ describe('authenticate/1.0 through the Admin API and webhook events (CC-VSA-005,
       state: 'answer-received',
       answer: { code: '482913' },
     })
+    // a wrong code: the route takes the same secret again with error wrong-code and the codes left (§6.4, D155)
+    for (const bad of [
+      { ...challenge, error: 'expired', triesLeft: 2 },
+      { ...challenge, error: 'wrong-code', triesLeft: -1 },
+      { ...challenge, error: 'wrong-code', triesLeft: 1.5 },
+    ]) {
+      await expect(validateChallenge({ challenge: bad })).rejects.toThrow()
+    }
+    await expect(
+      enrolments.challenge(
+        sent.threadId,
+        await validateChallenge({ challenge: { ...challenge, error: 'wrong-code', triesLeft: 1 } })
+      )
+    ).rejects.toThrow(/tries_left is 2/)
+    const again = waitForEvent(
+      holder,
+      'AuthenticateEnrolStateChanged' as any,
+      (e: any) => e.payload.record.state === EnrolState.ChallengeReceived && e.payload.record.challenges === 2
+    )
+    const afterWrongCode = await enrolments.challenge(
+      sent.threadId,
+      await validateChallenge({ challenge: { ...challenge, error: 'wrong-code', triesLeft: 2 } })
+    )
+    expect(afterWrongCode).toMatchObject({
+      state: 'challenge-sent',
+      challenges: 2,
+      challenge: { type: 'authenticator-app', error: 'wrong-code', triesLeft: 2 },
+    })
+    expect(((await again) as any).payload.challenge).toEqual({ ...challenge, error: 'wrong-code', triesLeft: 2 })
+    expect(JSON.stringify(afterWrongCode)).not.toContain(secret)
+    expect(JSON.stringify(webhook)).not.toContain(secret)
+
     expect((await enrolments.list(flow.flowId)).map((e) => e.threadId)).toEqual([sent.threadId])
     await service.modules.ayniFlow.closeFlow({ flowId: flow.flowId, outcome: 'completed' })
   })

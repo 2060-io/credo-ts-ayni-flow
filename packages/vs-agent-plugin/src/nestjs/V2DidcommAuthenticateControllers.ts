@@ -221,7 +221,7 @@ export class V2DidcommAuthenticateEnrolController {
   @ApiOperation({
     summary: 'Send the enrolment challenge',
     description:
-      "Sends authenticate/1.0/enrol-challenge: a passkey's creation options, or an authenticator app's secret, otpauth link, 6 digits and 30 seconds; again after a wrong code. The secret is not kept on the record.",
+      "Sends authenticate/1.0/enrol-challenge: a passkey's creation options, or an authenticator app's secret, otpauth link, 6 digits and 30 seconds. After a wrong code, again with the same secret, error wrong-code and triesLeft, the codes left (2, then 1); the first challenge carries neither, and a fourth is refused. The secret is not kept on the record.",
   })
   @ApiCreatedResponse({ type: EnrolExchangeDto })
   @ApiConflictResponse({ description: CLOSED_FLOW })

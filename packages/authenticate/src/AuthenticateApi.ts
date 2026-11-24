@@ -57,6 +57,11 @@ export interface SendEnrolRequestOptions {
 export interface SendEnrolChallengeOptions {
   /** The `@id` of the enrol-request. */
   threadId: string
+  /**
+   * The first challenge carries no `error` and no `triesLeft`. An authenticator app's challenge sent again after a
+   * wrong code carries the same secret, `error: 'wrong-code'` and `triesLeft`, the codes left:
+   * `ENROL_AUTHENTICATOR_APP_ATTEMPTS` less the challenges sent before it (2, then 1). A passkey's carries neither.
+   */
   challenge: EnrolChallenge
 }
 
@@ -167,7 +172,10 @@ export class AuthenticateApi {
     return record
   }
 
-  /** Sends an `enrol-challenge` (service): the first, or a new one after a wrong code. */
+  /**
+   * Sends an `enrol-challenge` (service): the first, or a new one after a wrong code, with `error: 'wrong-code'` and
+   * `triesLeft`. Refuses one whose `error` and `triesLeft` do not match its place in the exchange, and a fourth.
+   */
   public async sendEnrolChallenge(options: SendEnrolChallengeOptions): Promise<EnrolRecord> {
     const { message, record } = await this.service.createEnrolChallenge(
       this.agentContext,

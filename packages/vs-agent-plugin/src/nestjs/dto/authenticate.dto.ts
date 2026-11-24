@@ -384,6 +384,25 @@ export class EnrolChallengeDto {
   @IsOptional()
   @IsInt()
   period?: number
+
+  @ApiPropertyOptional({
+    enum: ['wrong-code'],
+    description:
+      'authenticator-app, a challenge sent again after a wrong code (with the same secret): wrong-code. The first challenge and a passkey challenge carry none',
+  })
+  @IsOptional()
+  @IsIn(['wrong-code'])
+  error?: 'wrong-code'
+
+  @ApiPropertyOptional({
+    minimum: 0,
+    description:
+      'authenticator-app, with error: the codes left, 3 less the challenges sent before this one (2, then 1); a fourth challenge is refused',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  triesLeft?: number
 }
 
 export class SendEnrolChallengeBodyDto {
@@ -462,7 +481,8 @@ export class EnrolExchangeDto {
   type!: string
 
   @ApiPropertyOptional({
-    description: "The last challenge; an authenticator app's secret and otpauthUri are not kept",
+    description:
+      "The last challenge; an authenticator app's secret and otpauthUri are not kept. One sent again after a wrong code keeps error (wrong-code) and triesLeft",
   })
   challenge?: Record<string, unknown>
 

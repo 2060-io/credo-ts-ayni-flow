@@ -2,7 +2,7 @@ import { DidCommMessage, IsValidMessageType, parseMessageType } from '@credo-ts/
 import { Expose } from 'class-transformer'
 import { IsInt, IsObject, IsOptional, IsString } from 'class-validator'
 
-import { type EnrolChallenge, fromWire, type PasskeyCreationOptions, toWire } from '../fields'
+import { type EnrolChallenge, type EnrolChallengeError, fromWire, type PasskeyCreationOptions, toWire } from '../fields'
 import { AUTHENTICATE_ENROL_CHALLENGE_TYPE } from './AuthenticateProtocol'
 
 export interface EnrolChallengeMessageOptions extends EnrolChallenge {
@@ -14,7 +14,7 @@ export interface EnrolChallengeMessageOptions extends EnrolChallenge {
 
 /**
  * `authenticate/1.0/enrol-challenge` (profile §6.4): the creation options of a passkey, or the secret of an
- * authenticator app; sent again after a wrong code.
+ * authenticator app; sent again after a wrong code, with the same secret, `error: "wrong-code"` and `tries_left`.
  */
 export class EnrolChallengeMessage extends DidCommMessage {
   public constructor(options: EnrolChallengeMessageOptions) {
@@ -29,6 +29,8 @@ export class EnrolChallengeMessage extends DidCommMessage {
       if (options.otpauthUri !== undefined) this.otpauthUri = options.otpauthUri
       if (options.digits !== undefined) this.digits = options.digits
       if (options.period !== undefined) this.period = options.period
+      if (options.error !== undefined) this.error = options.error
+      if (options.triesLeft !== undefined) this.triesLeft = options.triesLeft
     }
   }
 
@@ -64,6 +66,17 @@ export class EnrolChallengeMessage extends DidCommMessage {
   @IsInt()
   public period?: number
 
+  /** A challenge sent again after a wrong code: `wrong-code`. */
+  @IsOptional()
+  @IsString()
+  public error?: EnrolChallengeError
+
+  /** With `error`: the codes left. */
+  @Expose({ name: 'tries_left' })
+  @IsOptional()
+  @IsInt()
+  public triesLeft?: number
+
   public toChallenge(): EnrolChallenge {
     return {
       type: this.methodType as EnrolChallenge['type'],
@@ -72,6 +85,8 @@ export class EnrolChallengeMessage extends DidCommMessage {
       ...(this.otpauthUri !== undefined ? { otpauthUri: this.otpauthUri } : {}),
       ...(this.digits !== undefined ? { digits: this.digits } : {}),
       ...(this.period !== undefined ? { period: this.period } : {}),
+      ...(this.error !== undefined ? { error: this.error } : {}),
+      ...(this.triesLeft !== undefined ? { triesLeft: this.triesLeft } : {}),
     }
   }
 }

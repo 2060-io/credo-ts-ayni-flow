@@ -486,6 +486,13 @@ describe('authenticate/1.0 inside an authenticate flow, between a service and a 
         challenge: { type: 'authenticator-app', secret: 'JBSWY3DPEHPK3PXP' },
       })
     ).rejects.toThrow(/type of the request/)
+    // a passkey's challenge carries no error and no tries_left
+    await expect(
+      service.modules.authenticate.sendEnrolChallenge({
+        threadId: sent.threadId,
+        challenge: { type: 'passkey', publicKey, error: 'wrong-code', triesLeft: 2 },
+      })
+    ).rejects.toThrow(/public_key only/)
     const challenged = enrolState(holder, EnrolState.ChallengeReceived, sent.threadId)
     await service.modules.authenticate.sendEnrolChallenge({
       threadId: sent.threadId,
@@ -538,22 +545,54 @@ describe('authenticate/1.0 inside an authenticate flow, between a service and a 
     const wrong = enrolState(service, EnrolState.AnswerReceived, sent.threadId)
     await holder.modules.authenticate.answerEnrol({ threadId: sent.threadId, answer: { code: '000000' } })
     await wrong
+    // sent again with the same secret, error wrong-code and the codes left, and in their place only (§6.4, D155)
+    await expect(
+      service.modules.authenticate.sendEnrolChallenge({ threadId: sent.threadId, challenge })
+    ).rejects.toThrow(/carries error wrong-code and tries_left/)
+    await expect(
+      service.modules.authenticate.sendEnrolChallenge({
+        threadId: sent.threadId,
+        challenge: { ...challenge, error: 'wrong-code', triesLeft: 1 },
+      })
+    ).rejects.toThrow(/tries_left is 2/)
     const again = enrolState(holder, EnrolState.ChallengeReceived, sent.threadId)
-    await service.modules.authenticate.sendEnrolChallenge({ threadId: sent.threadId, challenge })
-    expect((await again).payload.record.challenges).toBe(2)
+    const secondOnService = await service.modules.authenticate.sendEnrolChallenge({
+      threadId: sent.threadId,
+      challenge: { ...challenge, error: 'wrong-code', triesLeft: 2 },
+    })
+    expect(secondOnService.challenge).toEqual({
+      type: 'authenticator-app',
+      digits: 6,
+      period: 30,
+      error: 'wrong-code',
+      triesLeft: 2,
+    })
+    const second = (await again).payload
+    expect(second.record.challenges).toBe(2)
+    // the holder shows "That code was not right, 2 tries left", with the secret once more in the event
+    expect(second.challenge).toEqual({ ...challenge, error: 'wrong-code', triesLeft: 2 })
+    expect(second.record.challenge).toMatchObject({ error: 'wrong-code', triesLeft: 2 })
 
     // three codes in all: the third challenge is the last, a fourth is refused (§6.4)
     const wrongAgain = enrolState(service, EnrolState.AnswerReceived, sent.threadId)
     await holder.modules.authenticate.answerEnrol({ threadId: sent.threadId, answer: { code: '111111' } })
     await wrongAgain
     const third = enrolState(holder, EnrolState.ChallengeReceived, sent.threadId)
-    await service.modules.authenticate.sendEnrolChallenge({ threadId: sent.threadId, challenge })
-    expect((await third).payload.record.challenges).toBe(3)
+    await service.modules.authenticate.sendEnrolChallenge({
+      threadId: sent.threadId,
+      challenge: { ...challenge, error: 'wrong-code', triesLeft: 1 },
+    })
+    const thirdEvent = (await third).payload
+    expect(thirdEvent.record.challenges).toBe(3)
+    expect(thirdEvent.record.challenge).toMatchObject({ error: 'wrong-code', triesLeft: 1 })
     const wrongThird = enrolState(service, EnrolState.AnswerReceived, sent.threadId)
     await holder.modules.authenticate.answerEnrol({ threadId: sent.threadId, answer: { code: '222222' } })
     await wrongThird
     await expect(
-      service.modules.authenticate.sendEnrolChallenge({ threadId: sent.threadId, challenge })
+      service.modules.authenticate.sendEnrolChallenge({
+        threadId: sent.threadId,
+        challenge: { ...challenge, error: 'wrong-code', triesLeft: 0 },
+      })
     ).rejects.toThrow(/3 codes in all/)
     // a holder that receives a fourth fails the enrolment malformed
     const failed = enrolState(holder, EnrolState.Failed, sent.threadId)
@@ -563,6 +602,57 @@ describe('authenticate/1.0 inside an authenticate flow, between a service and a 
       new EnrolChallengeMessage({ ...challenge, threadId: sent.threadId, parentThreadId: sent.parentThreadId })
     )
     expect((await failed).payload.record).toMatchObject({ errorCode: 'malformed' })
+  })
+
+  it('fails malformed, on the holder, a challenge whose error and tries_left do not match its place (§6.4)', async () => {
+    const challenge = {
+      type: 'authenticator-app' as const,
+      secret: 'JBSWY3DPEHPK3PXP',
+      otpauthUri: 'otpauth://totp/Acme:ana?secret=JBSWY3DPEHPK3PXP&issuer=Acme',
+      digits: 6,
+      period: 30,
+    }
+    const enrolAndChallenge = async (first: typeof challenge & { error?: 'wrong-code'; triesLeft?: number }) => {
+      const sent = await holder.modules.authenticate.enrol({
+        connectionId: holderConnection.id,
+        type: 'authenticator-app',
+      })
+      await enrolState(service, EnrolState.RequestReceived, sent.threadId)
+      const outcome = Promise.race([
+        enrolState(holder, EnrolState.ChallengeReceived, sent.threadId),
+        enrolState(holder, EnrolState.Failed, sent.threadId),
+      ])
+      await sendRaw(
+        service as Agent<any>,
+        serviceConnection,
+        new EnrolChallengeMessage({ ...first, threadId: sent.threadId, parentThreadId: sent.parentThreadId })
+      )
+      return { sent, record: (await outcome).payload.record }
+    }
+
+    // a first challenge that says a code was wrong
+    const early = await enrolAndChallenge({ ...challenge, error: 'wrong-code', triesLeft: 2 })
+    expect(early.record).toMatchObject({ state: EnrolState.Failed, errorCode: 'malformed' })
+    expect(early.record.errorDescription).toMatch(/first challenge carries no error/)
+
+    // a second challenge without error and tries_left, or with the wrong count
+    for (const [second, why] of [
+      [challenge, /carries error wrong-code and tries_left/],
+      [{ ...challenge, error: 'wrong-code' as const, triesLeft: 3 }, /tries_left is 2/],
+    ] as const) {
+      const { sent, record } = await enrolAndChallenge(challenge)
+      expect(record.state).toBe(EnrolState.ChallengeReceived)
+      await holder.modules.authenticate.answerEnrol({ threadId: sent.threadId, answer: { code: '000000' } })
+      const failed = enrolState(holder, EnrolState.Failed, sent.threadId)
+      await sendRaw(
+        service as Agent<any>,
+        serviceConnection,
+        new EnrolChallengeMessage({ ...second, threadId: sent.threadId, parentThreadId: sent.parentThreadId })
+      )
+      const failedRecord = (await failed).payload.record
+      expect(failedRecord).toMatchObject({ errorCode: 'malformed' })
+      expect(failedRecord.errorDescription).toMatch(why)
+    }
   })
 
   it('relays an unenrol outside any flow to the service, which alone takes it (§6.4, FLOW-SIGNIN-014)', async () => {
