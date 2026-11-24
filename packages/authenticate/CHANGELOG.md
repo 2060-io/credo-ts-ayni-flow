@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-authenticate@v0.3.0...credo-ts-didcomm-authenticate@v0.3.1) (2026-11-24)
+
+
+### Bug Fixes
+
+* **authenticate:** an enrol-challenge sent again after a wrong code carries error and tries_left ([5c89338](https://github.com/2060-io/credo-ts-ayni-flow/commit/5c89338205ccf4b8ea959a9dc0a33d3b7e02293e))
+* **authenticate:** an enrol-challenge sent again after a wrong code carries error and tries_left ([1416bf7](https://github.com/2060-io/credo-ts-ayni-flow/commit/1416bf7a0b12a6bc66843ae8b079e08c7ae3ace5))
+
 ## [0.3.0](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-authenticate@v0.2.1...credo-ts-didcomm-authenticate@v0.3.0) (2026-11-24)
 
 
