@@ -1,5 +1,6 @@
 {
   "packages/ayni-flow": "0.1.11",
+  "packages/authenticate": "0.1.10",
   "packages/authorize": "0.1.11",
   "packages/confirm": "0.1.11",
   "packages/link-session": "0.1.11",
