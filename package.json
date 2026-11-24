@@ -2,7 +2,7 @@
   "name": "credo-ts-ayni-flow",
   "private": true,
   "license": "Apache-2.0",
-  "description": "Credo-TS DIDComm modules for the Ayni Flow Profile 1.0: ayni-flow, authorize, confirm, link-session, session-grant, sign-tx, notify and reissue",
+  "description": "Credo-TS DIDComm modules for the Ayni Flow Profile 1.0: ayni-flow, authenticate, authorize, confirm, link-session, session-grant, sign-tx, notify, reissue and peer-status",
   "repository": {
     "type": "git",
     "url": "https://github.com/2060-io/credo-ts-ayni-flow"

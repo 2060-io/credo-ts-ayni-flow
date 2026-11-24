@@ -1,3 +1,9 @@
+import {
+  AuthenticateEventTypes,
+  type AuthenticateStateChangedEvent,
+  type EnrolStateChangedEvent,
+  type UnenrolReceivedEvent,
+} from '@ayni.org/credo-ts-didcomm-authenticate'
 import { AuthorizeEventTypes, type AuthorizeStateChangedEvent } from '@ayni.org/credo-ts-didcomm-authorize'
 import { AyniFlowEventTypes, type AyniFlowStateChangedEvent } from '@ayni.org/credo-ts-didcomm-ayni-flow'
 import { ConfirmEventTypes, type ConfirmStateChangedEvent } from '@ayni.org/credo-ts-didcomm-confirm'
@@ -16,11 +22,14 @@ import type { BaseLogger } from '@credo-ts/core'
 import type { VsAgent } from '@verana-labs/vs-agent-sdk'
 import { emitModuleMessageEvent } from '@verana-labs/vs-agent-sdk'
 
-import { toCarrierExchangeDto, toFlowDto } from '../nestjs/dto/index.js'
+import { toAuthenticateExchangeDto, toCarrierExchangeDto, toEnrolExchangeDto, toFlowDto } from '../nestjs/dto/index.js'
 
 /** The webhook event types this plugin delivers (`type` of the webhook body; `data` is the flow or exchange DTO plus `previousState`). */
 export const AYNI_FLOW_EVENT = {
   flowStateChanged: 'didcomm.ayni-flow.state-changed',
+  authenticateStateChanged: 'didcomm.authenticate.state-changed',
+  enrolStateChanged: 'didcomm.authenticate.enrol-state-changed',
+  unenrolReceived: 'didcomm.authenticate.unenrol-received',
   authorizeStateChanged: 'didcomm.authorize.state-changed',
   confirmStateChanged: 'didcomm.confirm.state-changed',
   linkSessionStateChanged: 'didcomm.link-session.state-changed',
@@ -73,6 +82,27 @@ export const ayniFlowEvents = (agent: VsAgent<any>, logger: BaseLogger) => {
   carrier(AYNI_FLOW_EVENT.sessionGrantStateChanged, SessionGrantEventTypes.SessionGrantStateChanged)
   carrier(AYNI_FLOW_EVENT.signTxStateChanged, SignTxEventTypes.SignTxStateChanged)
   carrier(AYNI_FLOW_EVENT.reissueStateChanged, ReissueEventTypes.ReissueStateChanged)
+
+  // authenticate/1.0 (CC-VSA-005): a choice, an answer, an enrol-request, an enrol-answer arrive as state changes
+  agent.events.on(AuthenticateEventTypes.AuthenticateStateChanged, ({ payload }: AuthenticateStateChangedEvent) => {
+    emitModuleMessageEvent(agent, AYNI_FLOW_EVENT.authenticateStateChanged, {
+      ...toAuthenticateExchangeDto(payload.record),
+      previousState: payload.previousState,
+    })
+  })
+  agent.events.on(AuthenticateEventTypes.EnrolStateChanged, ({ payload }: EnrolStateChangedEvent) => {
+    emitModuleMessageEvent(agent, AYNI_FLOW_EVENT.enrolStateChanged, {
+      ...toEnrolExchangeDto(payload.record),
+      previousState: payload.previousState,
+    })
+  })
+  agent.events.on(AuthenticateEventTypes.UnenrolReceived, ({ payload }: UnenrolReceivedEvent) => {
+    emitModuleMessageEvent(agent, AYNI_FLOW_EVENT.unenrolReceived, {
+      messageId: payload.messageId,
+      connectionId: payload.connectionId,
+      type: payload.type,
+    })
+  })
 
   agent.events.on(NotifyEventTypes.NotifyNotificationReceived, ({ payload }: NotifyNotificationReceivedEvent) => {
     emitModuleMessageEvent(agent, AYNI_FLOW_EVENT.notificationReceived, {

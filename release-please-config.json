@@ -11,6 +11,10 @@
       "release-type": "node",
       "component": "credo-ts-didcomm-ayni-flow"
     },
+    "packages/authenticate": {
+      "release-type": "node",
+      "component": "credo-ts-didcomm-authenticate"
+    },
     "packages/authorize": {
       "release-type": "node",
       "component": "credo-ts-didcomm-authorize"
@@ -54,6 +58,7 @@
       "groupName": "ayni-flow",
       "components": [
         "credo-ts-didcomm-ayni-flow",
+        "credo-ts-didcomm-authenticate",
         "credo-ts-didcomm-authorize",
         "credo-ts-didcomm-confirm",
         "credo-ts-didcomm-link-session",

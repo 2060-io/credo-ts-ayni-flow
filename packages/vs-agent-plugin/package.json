@@ -17,7 +17,7 @@
     "access": "public"
   },
   "license": "Apache-2.0",
-  "description": "VS Agent plugin for the Ayni Flow Profile 1.0: the ayni-flow envelope and its seven carrier protocols as Credo modules, Admin API v2 routes and webhook events (CC-VSA-005, CC-VSA-007, CC-VSA-010)",
+  "description": "VS Agent plugin for the Ayni Flow Profile 1.0: the ayni-flow envelope and its carrier protocols as Credo modules, Admin API v2 routes and webhook events (CC-VSA-005, CC-VSA-007, CC-VSA-010, CC-VSA-012, CC-VSA-013)",
   "homepage": "https://github.com/2060-io/credo-ts-ayni-flow/tree/main/packages/vs-agent-plugin",
   "repository": {
     "type": "git",
@@ -31,6 +31,7 @@
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
+    "@ayni.org/credo-ts-didcomm-authenticate": "workspace:^",
     "@ayni.org/credo-ts-didcomm-authorize": "workspace:^",
     "@ayni.org/credo-ts-didcomm-ayni-flow": "workspace:^",
     "@ayni.org/credo-ts-didcomm-confirm": "workspace:^",

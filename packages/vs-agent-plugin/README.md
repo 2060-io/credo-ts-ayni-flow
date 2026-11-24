@@ -1,9 +1,10 @@
 # @ayni.org/vs-agent-plugin-ayni-flow
 
 A [VS Agent](https://github.com/verana-labs/vs-agent) plugin that serves the **Ayni Flow Profile 1.0** to the Ayni
-app: the `ayni-flow/1.0` envelope and its carrier protocols (`authorize`, `confirm`, `link-session`, `session-grant`,
-`sign-tx`, `notify`, `reissue`) and the `peer-status/1.0` protocol as Credo modules, their Admin API v2 routes,
-message routing and webhook events. It implements CC-VSA-005, CC-VSA-007, CC-VSA-010 and CC-VSA-012 of
+app: the `ayni-flow/1.0` envelope and its carrier protocols (`authenticate`, `authorize`, `confirm`, `link-session`,
+`session-grant`, `sign-tx`, `notify`, `reissue`) and the `peer-status/1.0` protocol as Credo modules, their Admin API v2
+routes, message routing and webhook events. It implements CC-VSA-005, CC-VSA-007, CC-VSA-010, CC-VSA-012 and the
+plugin's part of CC-VSA-013 of
 `2060-io/ayni-spec` `v4/companion-changes.md`.
 
 ## Install into a VS Agent image
@@ -36,7 +37,7 @@ npm audit signatures
 
 | Route | Does |
 |-------|------|
-| `POST /v2/didcomm/ayni-flow/flows` | open a flow (`kind`, `title`, `origin`, `expiresTime`; optional `description`, `requires`, `steps` and `link`, an app link of at most 2048 characters the holder offers on its sheet); returns `flowId` |
+| `POST /v2/didcomm/ayni-flow/flows` | open a flow (`kind`, `title`, `origin`, `expiresTime`; optional `description`, `requires`, `steps` and `link`, an app link of at most 2048 characters the holder offers on its sheet); returns `flowId`. `409` for a second `authenticate` flow on a connection while one is open (FLOW-SIGNIN-001) |
 | `GET /v2/didcomm/ayni-flow/flows[/{flowId}]` | list or read flows |
 | `POST /v2/didcomm/ayni-flow/flows/{flowId}/close` | close with `outcome`, `reason`, `references` |
 | `POST /v2/didcomm/ayni-flow/flows/{flowId}/problem-report` | refuse or fail with a §11 code |
@@ -48,6 +49,12 @@ npm audit signatures
 | `POST /v2/didcomm/peer-status` | tell a peer where it stands: the rule by which it is identified, the organizations whose credentials are accepted and how the credential is obtained, whether it is identified, what is open to it |
 | `POST /v2/didcomm/peer-status/query`, `GET /v2/didcomm/peer-status/{connectionId}` | ask a peer for its status of this agent; read the last status sent and received on a connection |
 | `POST /v2/didcomm/revocation-notification` | send `revocation_notification/2.0/revoke` |
+| `POST /v2/didcomm/authenticate` | ask the person to authenticate inside an `authenticate` flow (`flowId`): `purpose`, `methods`, `combinations`, `text` for a step-up |
+| `POST /v2/didcomm/authenticate/{threadId}/step`, `.../step-result` | announce a step of the combination chosen (the identifying methods first) or send it again; end it `passed`, `failed` or `expired` |
+| `POST /v2/didcomm/authenticate/{threadId}/choice`, `.../answer` | the holder's side, for tests and tooling |
+| `POST /v2/didcomm/authenticate-enrol/{threadId}/challenge` | answer an `enrol-request` with a passkey's creation options or an authenticator app's secret; again after a wrong code. The secret is sent, never kept |
+| `POST /v2/didcomm/authenticate-enrol`, `.../{threadId}/answer`, `.../unenrol` | the holder's side, for tests and tooling |
+| `GET /v2/didcomm/authenticate[-enrol][/{threadId}]`, `POST .../{threadId}/fail` | read authentications and enrolments, record a controller-side failure |
 | `GET /v2/didcomm/{protocol}[/{threadId}]`, `POST .../{threadId}/fail` | read exchanges, record a controller-side failure |
 
 ## Webhook events
@@ -55,6 +62,12 @@ npm audit signatures
 `didcomm.ayni-flow.state-changed` (the flow DTO plus `previousState`; a peer's problem report arrives as `state:
 failed` with `errorCode` and `closedBy: peer`), `didcomm.{authorize,confirm,link-session,session-grant,sign-tx,
 reissue}.state-changed` (the exchange DTO plus `previousState`), `didcomm.notify.notification-received`, `didcomm.peer-status.status-received` (what a peer says of this agent, with the status it replaces) `didcomm.peer-status.query-received` (a peer asks; `answered` tells whether the plugin sent the status it holds) and `didcomm.peer-status.authenticate-received` (a peer asks to be asked for its credential: the controller opens an `authenticate` flow).
+
+`didcomm.authenticate.state-changed` (the authentication DTO plus `previousState`: `choice-received` with the
+`combination`, `answer-received` with the answer on its step in `steps`), `didcomm.authenticate.enrol-state-changed`
+(the enrolment DTO plus `previousState`: `request-received` with its `type`, `answer-received` with the `answer`;
+never an authenticator app's secret) and `didcomm.authenticate.unenrol-received` (`type`; the controller answers with
+a peer status whose `enrolled` no longer lists it).
 
 ## In code
 
