@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0](https://github.com/2060-io/credo-ts-ayni-flow/compare/vs-agent-plugin-ayni-flow@v0.1.11...vs-agent-plugin-ayni-flow@v0.2.0) (2026-11-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* **vs-agent-plugin:** the peer status carries authentication.methods (with a credential method's issuers) in place of authentication.credential and authentication.issuers; the call flow kind and the face-match-failed code are removed; authenticate/1.0 and the enrol flow are added.
+
+### Bug Fixes
+
+* **vs-agent-plugin:** restore the authenticate dependency and its release entry, dropped by release 0.1.11 ([973824b](https://github.com/2060-io/credo-ts-ayni-flow/commit/973824bc3fb5d98eaabd034db65bd81318217baa))
+* **vs-agent-plugin:** restore the authenticate dependency and its release entry, dropped by release 0.1.11 ([5fb27f4](https://github.com/2060-io/credo-ts-ayni-flow/commit/5fb27f4aeebe99ff07be91b7cd1af0b07c29230b))
+
 ## [0.1.11](https://github.com/2060-io/credo-ts-ayni-flow/compare/vs-agent-plugin-ayni-flow@v0.1.10...vs-agent-plugin-ayni-flow@v0.1.11) (2026-11-24)
 
 
