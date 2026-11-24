@@ -1,7 +1,7 @@
 {
   "name": "@ayni.org/credo-ts-didcomm-link-session",
   "type": "module",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "main": "./build/index.js",
   "module": "./build/index.js",
   "types": "./build/index.d.ts",
