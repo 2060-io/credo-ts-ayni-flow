@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-reissue@v0.2.0...credo-ts-didcomm-reissue@v0.2.1) (2026-11-24)
+
+
+### Miscellaneous Chores
+
+* **credo-ts-didcomm-reissue:** Synchronize ayni-flow versions
+
 ## [0.2.0](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-reissue@v0.1.11...credo-ts-didcomm-reissue@v0.2.0) (2026-11-24)
 
 
