@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/2060-io/credo-ts-ayni-flow/compare/vs-agent-plugin-ayni-flow@v0.2.1...vs-agent-plugin-ayni-flow@v0.3.0) (2026-11-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* **authenticate:** an `answer` may carry `consent: false`, which a service must end with a `step-result` `failed` `consent-declined` (`sendStepResult` refuses any other result for that step, and `sendStep` refuses to ask it again); after it the exchange waits for a new `choice` and `sendStep` refuses until it comes. A second `choice` that does not follow a `consent-declined` step result now fails the exchange `malformed` instead of being ignored (a repeat of the current combination is still ignored). `validateAnswer` accepts `consent: false`, `validateStepResult` takes the step it ends, and `createChoice` throws unless a choice is awaited. A fourth `enrol-challenge` of an authenticator app is refused on the service and fails the enrolment on the holder.
+* **ayni-flow:** `OpenFlowOptions.requires`, `AyniFlowOpenMessageOptions.requires`, `AyniFlowOpenMessage.requires` and `AyniFlowRecord.requires` are removed; an `open` no longer carries `requires`, and the plugin's open route refuses a body that names it.
+
+### Features
+
+* **authenticate:** a person may decline the face-match consent and choose another combination ([15580cd](https://github.com/2060-io/credo-ts-ayni-flow/commit/15580cdc0be09f3fbfca809e8a9514f55fb51cf6))
+* **ayni-flow:** an open carries no requires; the phone's own authentication is asked per protocol ([660f617](https://github.com/2060-io/credo-ts-ayni-flow/commit/660f6179b55193ccca2cf7f7a4c39b0eccbb79e1))
+
 ## [0.2.1](https://github.com/2060-io/credo-ts-ayni-flow/compare/vs-agent-plugin-ayni-flow@v0.2.0...vs-agent-plugin-ayni-flow@v0.2.1) (2026-11-24)
 
 
