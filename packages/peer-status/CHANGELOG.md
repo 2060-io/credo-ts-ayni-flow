@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-peer-status@v0.1.11...credo-ts-didcomm-peer-status@v0.2.0) (2026-11-24)
+
+
+### Miscellaneous Chores
+
+* **credo-ts-didcomm-peer-status:** Synchronize ayni-flow versions
+
 ## [0.1.11](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-peer-status@v0.1.10...credo-ts-didcomm-peer-status@v0.1.11) (2026-11-24)
 
 
