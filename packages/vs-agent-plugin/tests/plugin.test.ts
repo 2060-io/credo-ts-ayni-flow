@@ -24,6 +24,7 @@ import {
   createVsAgentPlugin,
   FLOW_LINK_MAX_LENGTH,
   OpenFlowBodyDto,
+  SendPeerStatusBodyDto,
   setupAyniFlowProtocols,
   V2DidcommAuthorizeController,
   V2DidcommAyniFlowController,
@@ -294,7 +295,13 @@ describe('Admin API and webhook events, service to holder', () => {
     const status = {
       authentication: {
         rule: 'required' as const,
-        credential: { jsonSchemaCredentialId: 'https://ecs.example/vt/schemas-badge-jsc.json' },
+        methods: {
+          badge: {
+            type: 'credential',
+            credential: { jsonSchemaCredentialId: 'https://ecs.example/vt/schemas-badge-jsc.json' },
+          },
+        },
+        combinations: [['badge']],
       },
       identified: false,
       open: [],
@@ -325,21 +332,67 @@ describe('Admin API and webhook events, service to holder', () => {
     ).rejects.toThrow(/empty with a refusal/)
   })
 
-  it('says which organizations it accepts and how the credential is obtained, and relays a guest who asks to authenticate (CC-VSA-013)', async () => {
+  it('says which methods and combinations it accepts, which organizations and how to obtain what is lacking, and relays a guest who asks to authenticate (CC-VSA-013)', async () => {
     const peerStatus = new V2DidcommPeerStatusController(service as any)
+    const [pipe] = Reflect.getMetadata(PIPES_METADATA, V2DidcommPeerStatusController) as ValidationPipe[]
+    const validate = (body: Record<string, unknown>) =>
+      pipe.transform(body, {
+        type: 'body',
+        metatype: SendPeerStatusBodyDto,
+        data: '',
+      }) as Promise<SendPeerStatusBodyDto>
     const status = {
       authentication: {
         rule: 'optional' as const,
-        credential: { jsonSchemaCredentialId: 'https://ecs.example/vt/schemas-badge-jsc.json' },
-        issuers: ['org:EE:12345678'],
+        methods: {
+          badge: {
+            type: 'credential',
+            credential: { jsonSchemaCredentialId: 'https://ecs.example/vt/schemas-badge-jsc.json' },
+            issuers: ['org:EE:12345678'],
+          },
+          email: { type: 'email' },
+          passport: { type: 'document' },
+          face: { type: 'face-match' },
+        },
+        combinations: [['badge'], ['passport'], ['email', 'face']],
         obtain: { text: 'Ask the Acme front desk for your badge.', url: 'https://acme.example/badge' },
       },
       identified: false,
       open: ['ag-ui'],
     }
     const told = waitForEvent(holder, 'PeerStatusReceived' as any)
-    await peerStatus.send({ connectionId: serviceConnectionId, status })
+    await peerStatus.send(await validate({ connectionId: serviceConnectionId, status }))
     expect(((await told) as any).payload.status).toEqual(status)
+
+    // once identified, what the person may enrol and has enrolled (FLOW-SIGNIN-014)
+    const identified = {
+      ...status,
+      authentication: { ...status.authentication, enrol: ['passkey'], enrolled: ['authenticator-app'] },
+      identified: true,
+    }
+    const toldAgain = waitForEvent(holder, 'PeerStatusReceived' as any)
+    await peerStatus.send(await validate({ connectionId: serviceConnectionId, status: identified }))
+    expect(((await toldAgain) as any).payload.status).toEqual(identified)
+    // the route refuses what it does not declare, the module what the profile does not allow
+    await expect(
+      validate({
+        connectionId: serviceConnectionId,
+        status: { ...status, authentication: { ...status.authentication, credential: {} } },
+      })
+    ).rejects.toThrow()
+    await expect(
+      peerStatus.send(
+        await validate({ connectionId: serviceConnectionId, status: { ...identified, identified: false, open: [] } })
+      )
+    ).rejects.toThrow(/identified receiver only/)
+    await expect(
+      peerStatus.send(
+        await validate({
+          connectionId: serviceConnectionId,
+          status: { ...status, authentication: { ...status.authentication, combinations: [['badge', 'card']] } },
+        })
+      )
+    ).rejects.toThrow(/does not list/)
 
     const asked = waitForEvent(service, 'PeerStatusAuthenticateReceived' as any)
     const holderConnection = (await holder.didcomm.connections.getAll())[0]

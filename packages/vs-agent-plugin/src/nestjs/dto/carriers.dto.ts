@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { ApiProperty, ApiPropertyOptional, getSchemaPath } from '@nestjs/swagger'
 import { Type } from 'class-transformer'
 import {
   IsArray,
@@ -529,8 +529,27 @@ export class PeerStatusCredentialDto {
   jsonSchemaCredentialId!: string
 }
 
+/** One method this agent accepts; the Admin API takes and gives it in camelCase. */
+export class PeerStatusMethodDto {
+  @ApiProperty({ enum: ['credential', 'email', 'document', 'face-match', 'authenticator-app', 'passkey'] })
+  @IsString()
+  @IsNotEmpty()
+  type!: string
+
+  @ApiPropertyOptional({ type: PeerStatusCredentialDto, description: 'A credential method only: the schema asked for' })
+  credential?: PeerStatusCredentialDto
+
+  @ApiPropertyOptional({
+    type: [String],
+    example: ['org:EE:12345678'],
+    description:
+      'A credential method only: the organizations whose credentials this agent accepts, by organization key; absent when any accredited issuer of the schema is accepted',
+  })
+  issuers?: string[]
+}
+
 export class PeerStatusObtainDto {
-  @ApiPropertyOptional({ description: "How the credential is obtained, in this agent's words" })
+  @ApiPropertyOptional({ description: "How the peer obtains what it lacks to authenticate, in this agent's words" })
   @IsOptional()
   @IsString()
   @IsNotEmpty()
@@ -548,31 +567,63 @@ export class PeerStatusAuthenticationDto {
   @IsIn(['none', 'optional', 'required'])
   rule!: 'none' | 'optional' | 'required'
 
-  @ApiPropertyOptional({ type: PeerStatusCredentialDto, description: 'Absent with the rule none' })
+  @ApiPropertyOptional({
+    type: 'object',
+    additionalProperties: { $ref: getSchemaPath(PeerStatusMethodDto) },
+    description:
+      'The methods this agent accepts, by the name it gives each; absent with the rule none. The module checks each method against the profile (§4.1)',
+    example: {
+      badge: {
+        type: 'credential',
+        credential: { jsonSchemaCredentialId: 'https://ecs.example/vt/schemas-badge-jsc.json' },
+      },
+      email: { type: 'email' },
+      face: { type: 'face-match' },
+    },
+  })
   @IsOptional()
-  @ValidateNested()
-  @Type(() => PeerStatusCredentialDto)
-  credential?: PeerStatusCredentialDto
+  @IsObject()
+  methods?: Record<string, PeerStatusMethodDto>
 
   @ApiPropertyOptional({
-    type: [String],
-    example: ['org:EE:12345678'],
-    description:
-      'The organizations whose credentials this agent accepts, by organization key; absent when any accredited issuer of the schema is accepted',
+    type: 'array',
+    items: { type: 'array', items: { type: 'string' } },
+    example: [['badge'], ['email', 'face']],
+    description: 'The accepted combinations, each a list of method names; absent with the rule none',
   })
   @IsOptional()
   @IsArray()
-  @IsString({ each: true })
-  issuers?: string[]
+  @IsArray({ each: true })
+  combinations?: string[][]
 
   @ApiPropertyOptional({
     type: PeerStatusObtainDto,
-    description: 'How the peer obtains a credential this agent accepts',
+    description: 'How the peer obtains what it lacks to authenticate',
   })
   @IsOptional()
   @ValidateNested()
   @Type(() => PeerStatusObtainDto)
   obtain?: PeerStatusObtainDto
+
+  @ApiPropertyOptional({
+    type: [String],
+    enum: ['authenticator-app', 'passkey'],
+    description: 'The types the peer may enrol with this agent; to an identified peer only',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  enrol?: string[]
+
+  @ApiPropertyOptional({
+    type: [String],
+    enum: ['authenticator-app', 'passkey'],
+    description: 'The types the peer enrolled with this agent; to an identified peer only',
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  enrolled?: string[]
 }
 
 export class PeerStatusRefusalDto {

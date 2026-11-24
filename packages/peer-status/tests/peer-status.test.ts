@@ -25,13 +25,18 @@ import {
 } from '../src'
 
 const BADGE = 'https://ecs.example/vt/schemas-badge-jsc.json'
+/** One method, one combination: a badge. */
+const badgeOnly = {
+  methods: { badge: { type: 'credential', credential: { jsonSchemaCredentialId: BADGE } } },
+  combinations: [['badge']],
+}
 const entered: PeerStatus = {
-  authentication: { rule: 'optional', credential: { jsonSchemaCredentialId: BADGE } },
+  authentication: { rule: 'optional', ...badgeOnly },
   identified: false,
   open: ['ag-ui'],
 }
 const mustIdentify: PeerStatus = {
-  authentication: { rule: 'required', credential: { jsonSchemaCredentialId: BADGE } },
+  authentication: { rule: 'required', ...badgeOnly },
   identified: false,
   open: [],
 }
@@ -40,52 +45,54 @@ const refused: PeerStatus = {
   ...mustIdentify,
   refusal: { code: 'authentication-declined', comment: 'You declined to authenticate.' },
 }
-/** A service that accepts the badges of one organization and says how they are obtained (§4.1). */
+/** The profile §4.1 example: four methods, three combinations, the organizations accepted, how to obtain a badge. */
 const offered: PeerStatus = {
   authentication: {
     rule: 'optional',
-    credential: { jsonSchemaCredentialId: BADGE },
-    issuers: ['org:EE:12345678'],
+    methods: {
+      badge: { type: 'credential', credential: { jsonSchemaCredentialId: BADGE }, issuers: ['org:EE:12345678'] },
+      email: { type: 'email' },
+      passport: { type: 'document' },
+      face: { type: 'face-match' },
+    },
+    combinations: [['badge'], ['passport'], ['email', 'face']],
     obtain: { text: 'Ask the Acme front desk for your badge.', url: 'https://acme.example/badge' },
   },
   identified: false,
   open: [],
 }
+/** An identified person who may enrol a passkey and enrolled an authenticator app (§4.1, §6.4). */
+const enrolled: PeerStatus = {
+  authentication: {
+    rule: 'required',
+    methods: { ...offered.authentication.methods, app: { type: 'authenticator-app' }, key: { type: 'passkey' } },
+    combinations: [['badge'], ['email', 'app'], ['key']],
+    enrol: ['passkey'],
+    enrolled: ['authenticator-app'],
+  },
+  identified: true,
+  open: ['ag-ui'],
+}
 
 describe('peer-status/1.0 messages', () => {
   it('serialises status as the profile §4.1 example', () => {
-    const message = new PeerStatusStatusMessage({ ...entered, id: 's-1' })
-    expect(JsonTransformer.toJSON(message)).toEqual({
-      '@type': PEER_STATUS_STATUS_TYPE,
-      '@id': 's-1',
-      authentication: { rule: 'optional', credential: { json_schema_credential_id: BADGE } },
-      identified: false,
-      open: ['ag-ui'],
-    })
-  })
-
-  it('carries a refusal, and reads a status back as it was written', () => {
-    const json = JsonTransformer.toJSON(new PeerStatusStatusMessage({ ...refused, id: 's-2' }))
-    expect(json.refusal).toEqual({
-      code: 'authentication-declined',
-      comment: 'You declined to authenticate.',
-    })
-    expect(JsonTransformer.fromJSON(json, PeerStatusStatusMessage).toStatus()).toEqual(refused)
-    const none: PeerStatus = { authentication: { rule: 'none' }, identified: false, open: ['ag-ui'] }
-    const plain = JsonTransformer.toJSON(new PeerStatusStatusMessage(none))
-    expect(plain.authentication).toEqual({ rule: 'none' })
-    expect(JsonTransformer.fromJSON(plain, PeerStatusStatusMessage).toStatus()).toEqual(none)
-  })
-
-  it('carries the organizations accepted and how the credential is obtained, as the profile §4.1 example', () => {
-    const json = JsonTransformer.toJSON(new PeerStatusStatusMessage({ ...offered, id: 's-3' }))
+    const json = JsonTransformer.toJSON(new PeerStatusStatusMessage({ ...offered, id: 's-1' }))
     expect(json).toEqual({
       '@type': PEER_STATUS_STATUS_TYPE,
-      '@id': 's-3',
+      '@id': 's-1',
       authentication: {
         rule: 'optional',
-        credential: { json_schema_credential_id: BADGE },
-        issuers: ['org:EE:12345678'],
+        methods: {
+          badge: {
+            type: 'credential',
+            credential: { json_schema_credential_id: BADGE },
+            issuers: ['org:EE:12345678'],
+          },
+          email: { type: 'email' },
+          passport: { type: 'document' },
+          face: { type: 'face-match' },
+        },
+        combinations: [['badge'], ['passport'], ['email', 'face']],
         obtain: { text: 'Ask the Acme front desk for your badge.', url: 'https://acme.example/badge' },
       },
       identified: false,
@@ -102,24 +109,114 @@ describe('peer-status/1.0 messages', () => {
     ).toEqual(textOnly)
   })
 
-  it('holds the organizations and the way to obtain the credential to the rules of the profile', () => {
-    expect(validateStatus(offered)).toBeUndefined()
+  it('carries what an identified receiver may enrol and has enrolled (§4.1, §6.4)', () => {
+    const json = JsonTransformer.toJSON(new PeerStatusStatusMessage({ ...enrolled, id: 's-4' }))
+    expect(json.authentication).toMatchObject({ enrol: ['passkey'], enrolled: ['authenticator-app'] })
+    expect(json.authentication.methods.key).toEqual({ type: 'passkey' })
+    expect(JsonTransformer.fromJSON(json, PeerStatusStatusMessage).toStatus()).toEqual(enrolled)
+    expect(validateStatus(enrolled, { strictTypes: true })).toBeUndefined()
+  })
+
+  it('carries a refusal, and reads a status back as it was written', () => {
+    const json = JsonTransformer.toJSON(new PeerStatusStatusMessage({ ...refused, id: 's-2' }))
+    expect(json.refusal).toEqual({
+      code: 'authentication-declined',
+      comment: 'You declined to authenticate.',
+    })
+    expect(JsonTransformer.fromJSON(json, PeerStatusStatusMessage).toStatus()).toEqual(refused)
+    const none: PeerStatus = { authentication: { rule: 'none' }, identified: false, open: ['ag-ui'] }
+    const plain = JsonTransformer.toJSON(new PeerStatusStatusMessage(none))
+    expect(plain.authentication).toEqual({ rule: 'none' })
+    expect(JsonTransformer.fromJSON(plain, PeerStatusStatusMessage).toStatus()).toEqual(none)
+  })
+
+  it('holds the methods and the combinations to the rules of the profile', () => {
+    expect(validateStatus(offered, { strictTypes: true })).toBeUndefined()
     const withAuthentication = (authentication: Partial<PeerStatus['authentication']>): PeerStatus => ({
       ...offered,
       authentication: { ...offered.authentication, ...authentication },
     })
+    const withBadge = (badge: Record<string, unknown>) =>
+      withAuthentication({ methods: { ...offered.authentication.methods, badge: badge as never } })
+    expect(validateStatus(withAuthentication({ methods: undefined }))).toMatch(/methods is required/)
+    expect(validateStatus(withAuthentication({ methods: {} }))).toMatch(/methods is required/)
+    expect(validateStatus(withAuthentication({ combinations: undefined }))).toMatch(/combinations is required/)
+    expect(validateStatus(withAuthentication({ combinations: [] }))).toMatch(/combinations is required/)
+    expect(validateStatus(withAuthentication({ combinations: [[]] }))).toMatch(/list of method names/)
+    expect(validateStatus(withAuthentication({ combinations: [['badge'], ['card']] }))).toMatch(
+      /names a method the status does not list/
+    )
+    expect(validateStatus(withAuthentication({ combinations: [['email', 'email']] }))).toMatch(/names a method twice/)
+    expect(
+      validateStatus(
+        withAuthentication({
+          combinations: [
+            ['email', 'face'],
+            ['face', 'email'],
+          ],
+        })
+      )
+    ).toMatch(/listed twice/)
+    // a credential method names its schema; the schema and the organizations belong to credential methods alone
+    expect(validateStatus(withBadge({ type: 'credential' }))).toMatch(/json_schema_credential_id is required/)
+    expect(
+      validateStatus(
+        withAuthentication({
+          methods: {
+            ...offered.authentication.methods,
+            email: { type: 'email', issuers: ['org:EE:1'] },
+          },
+        })
+      )
+    ).toMatch(/issuers is for a credential method only/)
+    expect(validateStatus(withBadge({ type: undefined }))).toMatch(/type is required/)
+    // a notifier sends the types of the profile; a receiver takes a later one, which it cannot complete
+    expect(validateStatus(withBadge({ type: 'retina' }))).toBeUndefined()
+    expect(validateStatus(withBadge({ type: 'retina' }), { strictTypes: true })).toMatch(/type must be one of/)
+  })
+
+  it('holds the organizations, the way to obtain the credential and the enrolments to the rules of the profile', () => {
+    const withBadge = (badge: Record<string, unknown>): PeerStatus => ({
+      ...offered,
+      authentication: {
+        ...offered.authentication,
+        methods: {
+          ...offered.authentication.methods,
+          badge: { ...offered.authentication.methods?.badge, ...badge } as never,
+        },
+      },
+    })
     // no list means any accredited issuer: an empty one would accept nobody
-    expect(validateStatus(withAuthentication({ issuers: [] }))).toMatch(/issuers must be a list/)
-    expect(validateStatus(withAuthentication({ issuers: ['org:EE:1', 'org:EE:1'] }))).toMatch(/key twice/)
+    expect(validateStatus(withBadge({ issuers: [] }))).toMatch(/issuers must be a list/)
+    expect(validateStatus(withBadge({ issuers: ['org:EE:1', 'org:EE:1'] }))).toMatch(/key twice/)
+    const withAuthentication = (authentication: Partial<PeerStatus['authentication']>): PeerStatus => ({
+      ...offered,
+      authentication: { ...offered.authentication, ...authentication },
+    })
     expect(validateStatus(withAuthentication({ obtain: {} }))).toMatch(/a text, a link, or both/)
     expect(validateStatus(withAuthentication({ obtain: { url: 'http://acme.example' } }))).toMatch(/https link/)
     expect(validateStatus(withAuthentication({ obtain: { url: 'https://acme.example/badge' } }))).toBeUndefined()
     const none: PeerStatus = { authentication: { rule: 'none' }, identified: false, open: ['ag-ui'] }
-    expect(validateStatus({ ...none, authentication: { rule: 'none', issuers: ['org:EE:1'] } })).toMatch(
-      /issuers is absent with the rule none/
+    expect(validateStatus({ ...none, authentication: { rule: 'none', methods: badgeOnly.methods } })).toMatch(
+      /methods is absent with the rule none/
+    )
+    expect(validateStatus({ ...none, authentication: { rule: 'none', combinations: [['badge']] } })).toMatch(
+      /combinations is absent with the rule none/
     )
     expect(validateStatus({ ...none, authentication: { rule: 'none', obtain: { text: 'x' } } })).toMatch(
       /obtain is absent with the rule none/
+    )
+    // enrol and enrolled go to an identified receiver only, each type once, of the types one may enrol
+    expect(validateStatus({ ...enrolled, identified: false, open: [] })).toMatch(/identified receiver only/)
+    const withEnrol = (fields: Partial<PeerStatus['authentication']>): PeerStatus => ({
+      ...enrolled,
+      authentication: { ...enrolled.authentication, ...fields },
+    })
+    expect(validateStatus(withEnrol({ enrol: ['passkey', 'passkey'] }))).toMatch(/enrol lists a type twice/)
+    expect(validateStatus(withEnrol({ enrolled: [''] }))).toMatch(/enrolled must be a list of method types/)
+    expect(validateStatus(withEnrol({ enrol: ['email'] }))).toBeUndefined()
+    expect(validateStatus(withEnrol({ enrol: ['email'] }), { strictTypes: true })).toMatch(
+      /enrol lists only authenticator-app, passkey/
     )
   })
 
@@ -133,10 +230,6 @@ describe('peer-status/1.0 messages', () => {
   it('holds a status to the rules of the profile', () => {
     expect(validateStatus(entered)).toBeUndefined()
     expect(validateStatus(refused, { strictRefusal: true })).toBeUndefined()
-    expect(validateStatus({ ...entered, authentication: { rule: 'optional' } })).toMatch(/credential/)
-    expect(
-      validateStatus({ ...entered, authentication: { rule: 'none', credential: { jsonSchemaCredentialId: BADGE } } })
-    ).toMatch(/absent with the rule none/)
     expect(validateStatus({ ...entered, authentication: { rule: 'sometimes' as never } })).toMatch(
       /rule must be one of/
     )
@@ -202,6 +295,28 @@ describe('peer-status/1.0 between a service and a holder', () => {
     expect(payload.previous).toEqual(mustIdentify)
     expect(payload.status).toEqual(identified)
     expect((await holder.modules.peerStatus.findByConnectionId(holderConnectionId))?.received).toEqual(identified)
+  })
+
+  it('tells an identified person what it may enrol and has enrolled, and refuses to send enrolments to a visitor (FLOW-SIGNIN-014)', async () => {
+    const received = waitForEvent<PeerStatusReceivedEvent>(holder, PeerStatusEventTypes.PeerStatusReceived)
+    await service.modules.peerStatus.send({ connectionId: serviceConnectionId, status: enrolled })
+    expect((await received).payload.status).toEqual(enrolled)
+    await expect(
+      service.modules.peerStatus.send({
+        connectionId: serviceConnectionId,
+        status: { ...enrolled, identified: false, open: [] },
+      })
+    ).rejects.toThrow(/identified receiver only/)
+    await expect(
+      service.modules.peerStatus.send({
+        connectionId: serviceConnectionId,
+        status: { ...enrolled, authentication: { ...enrolled.authentication, enrol: ['email'] } },
+      })
+    ).rejects.toThrow(/enrol lists only/)
+    // back to the status the next test asks for
+    const again = waitForEvent<PeerStatusReceivedEvent>(holder, PeerStatusEventTypes.PeerStatusReceived)
+    await service.modules.peerStatus.send({ connectionId: serviceConnectionId, status: identified })
+    await again
   })
 
   it('answers a query with the status it last sent', async () => {
