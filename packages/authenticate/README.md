@@ -13,6 +13,9 @@ pnpm add @ayni.org/credo-ts-didcomm-authenticate
 
 Peer dependencies: `@credo-ts/core` and `@credo-ts/didcomm` on the 0.8.0 line.
 
+Released from this repository's release workflow through npm trusted publishing, with provenance, from 0.2.1 on
+(0.2.0 was published by hand, as every first version of a package).
+
 ## Roles
 
 `AuthenticateRole.Authenticator` (the Ayni app) and `AuthenticateRole.Requester` (a service), disclosed through

@@ -106,4 +106,11 @@ jobs:
 
       - name: Publish to npm
         if: steps.version.outputs.publish == 'true'
-        run: pnpm publish "./$PACKAGE" --access public --provenance --no-git-checks
+        # a run repeated once the version is on npm (published by an earlier attempt, or the registry was slow to show it
+        # to the check above) ends without error: npm refuses to publish over a version
+        run: |
+          if pnpm publish "./$PACKAGE" --access public --provenance --no-git-checks; then exit 0; fi
+          NAME=$(jq -r .name "$PACKAGE/package.json")
+          VERSION=$(jq -r .version "$PACKAGE/package.json")
+          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then echo "$NAME@$VERSION is on npm"; exit 0; fi
+          exit 1
