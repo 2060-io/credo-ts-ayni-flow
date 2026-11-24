@@ -12,6 +12,7 @@ import {
   ValidationPipe,
 } from '@nestjs/common'
 import {
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -39,6 +40,10 @@ export class V2DidcommAyniFlowController {
   })
   @ApiCreatedResponse({ description: 'The flow, pending', type: FlowDto })
   @ApiNotFoundResponse({ description: 'No connection with the given id' })
+  @ApiConflictResponse({
+    description:
+      'An authenticate flow this agent opened is still open on the connection: a service keeps one at a time (FLOW-SIGNIN-001)',
+  })
   public async open(@Body() body: OpenFlowBodyDto): Promise<FlowDto> {
     const record = await this.agent.modules.ayniFlow.openFlow({
       connectionId: body.connectionId,

@@ -1,3 +1,4 @@
+import { AuthenticateModule, AuthenticateRole } from '@ayni.org/credo-ts-didcomm-authenticate'
 import { AuthorizeModule, AuthorizeRole } from '@ayni.org/credo-ts-didcomm-authorize'
 import { AyniFlowModule, AyniFlowRole } from '@ayni.org/credo-ts-didcomm-ayni-flow'
 import { ConfirmModule, ConfirmRole } from '@ayni.org/credo-ts-didcomm-confirm'
@@ -16,7 +17,7 @@ export interface AyniFlowSdkPlugin {
 
 /**
  * The Credo modules of the Ayni Flow Profile 1.0 with the roles of its §3 for one side: a service discloses
- * `requester` (authorize, confirm, sign-tx), `agent` (link-session, session-grant), `sender` (notify), `issuer`
+ * `requester` (authenticate, authorize, confirm, sign-tx), `agent` (link-session, session-grant), `sender` (notify), `issuer`
  * (reissue) and `service` (ayni-flow); a holder the opposite roles. For peer-status a service is both `notifier`
  * and `receiver`, since two services each tell the other (profile §4.1), and a holder a `receiver`. Must be used
  * together with `setupBaseDidComm()`.
@@ -30,6 +31,9 @@ export function setupAyniFlowProtocols(options: AyniFlowPluginOptions = {}): Ayn
         supportedKinds: options.supportedKinds,
         maxPendingFlows: options.maxPendingFlows,
         expiryCheckIntervalMs: options.expiryCheckIntervalMs ?? (service ? 60_000 : 0),
+      }),
+      authenticate: new AuthenticateModule({
+        roles: [service ? AuthenticateRole.Requester : AuthenticateRole.Authenticator],
       }),
       authorize: new AuthorizeModule({ roles: [service ? AuthorizeRole.Requester : AuthorizeRole.Approver] }),
       confirm: new ConfirmModule({ roles: [service ? ConfirmRole.Requester : ConfirmRole.Confirmer] }),

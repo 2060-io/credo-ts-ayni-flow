@@ -4,6 +4,10 @@ import { ayniFlowEvents } from '../events/ayniFlowEvents.js'
 import { setupAyniFlowProtocols } from '../sdk/setupAyniFlowProtocols.js'
 import type { AyniFlowPluginOptions, AyniFlowSide } from '../types.js'
 import { AYNI_FLOW_DIDCOMM_MODULES } from './didcommModules.js'
+import {
+  V2DidcommAuthenticateController,
+  V2DidcommAuthenticateEnrolController,
+} from './V2DidcommAuthenticateControllers.js'
 import { V2DidcommAyniFlowController } from './V2DidcommAyniFlowController.js'
 import {
   V2DidcommAuthorizeController,
@@ -25,6 +29,8 @@ export const AyniFlowPlugin = (options: AyniFlowPluginOptions = {}): VsAgentNest
   credoPlugin: setupAyniFlowProtocols(options),
   controllers: [
     V2DidcommAyniFlowController,
+    V2DidcommAuthenticateController,
+    V2DidcommAuthenticateEnrolController,
     V2DidcommAuthorizeController,
     V2DidcommConfirmController,
     V2DidcommLinkSessionController,

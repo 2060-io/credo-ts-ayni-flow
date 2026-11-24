@@ -7,6 +7,7 @@ import {
   type TestAgent,
   waitForEvent,
 } from '@ayni.org/credo-ts-ayni-test-utils'
+import { AuthenticateRole } from '@ayni.org/credo-ts-didcomm-authenticate'
 import { AuthorizeRole, AuthorizeState } from '@ayni.org/credo-ts-didcomm-authorize'
 import { AyniFlowClosedError, AyniFlowRole, AyniFlowState } from '@ayni.org/credo-ts-didcomm-ayni-flow'
 import { PeerStatusRole } from '@ayni.org/credo-ts-didcomm-peer-status'
@@ -33,10 +34,11 @@ import {
 import { SendPeerStatusBodyDto } from '../src/nestjs/dto/carriers.dto.js'
 
 describe('plugin shape', () => {
-  it('builds a VS Agent plugin with the nine modules, ten controllers and the routing table', () => {
+  it('builds a VS Agent plugin with the ten modules, twelve controllers and the routing table', () => {
     const plugin = AyniFlowPlugin()
     expect(plugin.name).toBe('ayni-flow')
     expect(Object.keys(plugin.credoPlugin!.modules).sort()).toEqual([
+      'authenticate',
       'authorize',
       'ayniFlow',
       'confirm',
@@ -47,9 +49,10 @@ describe('plugin shape', () => {
       'sessionGrant',
       'signTx',
     ])
-    expect(plugin.controllers).toHaveLength(10)
+    expect(plugin.controllers).toHaveLength(12)
     expect(plugin.didcommModules?.map((m) => m.module)).toEqual([
       'ayni-flow',
+      'authenticate',
       'authorize',
       'confirm',
       'link-session',
@@ -70,6 +73,8 @@ describe('plugin shape', () => {
     expect(holder.ayniFlow.config.role).toBe(AyniFlowRole.Holder)
     expect(holder.authorize.config.roles).toEqual([AuthorizeRole.Approver])
     expect(holder.reissue.config.roles).toEqual([ReissueRole.Requester])
+    expect(service.authenticate.config.roles).toEqual([AuthenticateRole.Requester])
+    expect(holder.authenticate.config.roles).toEqual([AuthenticateRole.Authenticator])
     // peer-status is symmetric between services: a service tells and is told, a holder is told
     expect(service.peerStatus.config.roles).toEqual([PeerStatusRole.Notifier, PeerStatusRole.Receiver])
     expect(holder.peerStatus.config.roles).toEqual([PeerStatusRole.Receiver])

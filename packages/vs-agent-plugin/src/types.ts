@@ -1,3 +1,4 @@
+import type { AuthenticateModule } from '@ayni.org/credo-ts-didcomm-authenticate'
 import type { AuthorizeModule } from '@ayni.org/credo-ts-didcomm-authorize'
 import type { AyniFlowModule } from '@ayni.org/credo-ts-didcomm-ayni-flow'
 import type { ConfirmModule } from '@ayni.org/credo-ts-didcomm-confirm'
@@ -12,6 +13,7 @@ import type { BaseAgentModules } from '@verana-labs/vs-agent-sdk'
 /** The Credo modules this plugin adds to a VS Agent, by the names the Admin API controllers resolve them under. */
 export type AyniFlowModules = {
   ayniFlow: AyniFlowModule
+  authenticate: AuthenticateModule
   authorize: AuthorizeModule
   confirm: ConfirmModule
   linkSession: LinkSessionModule

@@ -1,7 +1,7 @@
 # credo-ts-ayni-flow
 
-Credo-TS DIDComm modules for the **Ayni Flow Profile 1.0**: the `ayni-flow/1.0` envelope and the seven carrier
-protocols the profile introduces. One published package per protocol, usable by VS Agent (Node) and by the Ayni app
+Credo-TS DIDComm modules for the **Ayni Flow Profile 1.0**: the `ayni-flow/1.0` envelope, the carrier
+protocols the profile introduces and `peer-status/1.0`. One published package per protocol, usable by VS Agent (Node) and by the Ayni app
 (React Native) alike, on the Credo-TS line both pin.
 
 The profile is normative: [`v4/ayni-flow-profile/profile.md`](https://github.com/2060-io/ayni-spec/blob/main/v4/ayni-flow-profile/profile.md)
@@ -12,6 +12,7 @@ in `2060-io/ayni-spec`. Each package names the sections and the `FLOW-*` require
 | Package | Protocol | Profile | Roles (holder / service) |
 |---------|----------|---------|--------------------------|
 | [`@ayni.org/credo-ts-didcomm-ayni-flow`](packages/ayni-flow) | `https://didcomm.org/ayni-flow/1.0` | §5, §11 | `holder` / `service` |
+| [`@ayni.org/credo-ts-didcomm-authenticate`](packages/authenticate) | `https://didcomm.org/authenticate/1.0` | §6.14, §6.4 | `authenticator` / `requester` |
 | [`@ayni.org/credo-ts-didcomm-authorize`](packages/authorize) | `https://didcomm.org/authorize/1.0` | §6.5 | `approver` / `requester` |
 | [`@ayni.org/credo-ts-didcomm-confirm`](packages/confirm) | `https://didcomm.org/confirm/1.0` | §6.6 | `confirmer` / `requester` |
 | [`@ayni.org/credo-ts-didcomm-link-session`](packages/link-session) | `https://didcomm.org/link-session/1.0` | §6.7 | `holder` / `agent` |
@@ -20,12 +21,14 @@ in `2060-io/ayni-spec`. Each package names the sections and the `FLOW-*` require
 | [`@ayni.org/credo-ts-didcomm-notify`](packages/notify) | `https://didcomm.org/notify/1.0` | §6.10 | `receiver` / `sender` |
 | [`@ayni.org/credo-ts-didcomm-reissue`](packages/reissue) | `https://didcomm.org/reissue/1.0` | §6.11 | `requester` / `issuer` |
 | [`@ayni.org/credo-ts-didcomm-peer-status`](packages/peer-status) | `https://didcomm.org/peer-status/1.0` | §4.1 | `receiver` / `notifier` and `receiver` |
-| [`@ayni.org/vs-agent-plugin-ayni-flow`](packages/vs-agent-plugin) | all of the above as a [VS Agent](https://github.com/verana-labs/vs-agent) plugin: Admin API v2 routes, message routing, webhook events | CC-VSA-005/007/010/012 | per side |
+| [`@ayni.org/vs-agent-plugin-ayni-flow`](packages/vs-agent-plugin) | all of the above as a [VS Agent](https://github.com/verana-labs/vs-agent) plugin: Admin API v2 routes, message routing, webhook events | CC-VSA-005/007/010/012/013 | per side |
 
-The kinds `present`, `issue`, `nfc-read`, `call` and `revoked` ride on protocols Credo and
+The kinds `present`, `issue`, `nfc-read` and `revoked`, and the `credential`, `document` and `face-match` steps of an
+`authenticate` flow, ride on protocols Credo and
 [`openwallet-foundation/credo-ts-didcomm-ext`](https://github.com/openwallet-foundation/credo-ts-didcomm-ext) already
 provide (present-proof 2.0, issue-credential 2.0, mrtd 1.0, calls 1.0, revocation_notification 2.0); set
-`parentThreadId` to the flow id when you send them and the `ayni-flow` module groups them into the flow.
+`parentThreadId` to the flow id when you send them and the `ayni-flow` module groups them into the flow. The `call`
+kind is gone from the profile: calls 1.0 serves only the face match of an authentication.
 
 ## Credo-TS line
 
@@ -89,6 +92,8 @@ the host reacts to those rather than to raw messages. Records are queryable thro
   a fresh read, so a closed flow never becomes `pending` or `active` again;
 - sends no carrier message in a closed or expired flow, whichever module sends it: the send throws
   `AyniFlowClosedError` (FLOW-CORE-005), as does closing a closed flow;
+- keeps one `authenticate` flow open per connection on the side that opens it: a second `openFlow` throws
+  `AyniFlowAlreadyOpenError`, a 409 (FLOW-SIGNIN-001);
 - ignores replays (FLOW-SEC-003).
 
 ### What the carrier modules do

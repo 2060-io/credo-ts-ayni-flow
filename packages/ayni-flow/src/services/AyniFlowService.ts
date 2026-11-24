@@ -3,6 +3,7 @@ import { CredoError, EventEmitter, InjectionSymbols, inject, injectable } from '
 import type { DidCommConnectionRecord, DidCommInboundMessageContext } from '@credo-ts/didcomm'
 
 import { AyniFlowModuleConfig } from '../AyniFlowModuleConfig'
+import { AyniFlowAlreadyOpenError } from '../errors'
 import {
   AyniFlowCloseMessage,
   AyniFlowOpenMessage,
@@ -15,6 +16,7 @@ import {
   AyniFlowClosedBy,
   AyniFlowErrorCode,
   AyniFlowEventTypes,
+  AyniFlowKind,
   type AyniFlowOutcome,
   AyniFlowState,
   type AyniFlowStateChangedEvent,
@@ -51,6 +53,12 @@ export interface ProcessOpenResult {
   record?: AyniFlowRecord
   problemReport?: AyniFlowProblemReportMessage
 }
+
+/**
+ * Kinds of which an opener keeps at most one open per connection: a service keeps at most one `authenticate` flow
+ * pending on a connection (§6.14, FLOW-SIGNIN-001).
+ */
+export const ONE_OPEN_PER_CONNECTION: readonly string[] = [AyniFlowKind.Authenticate]
 
 /** How long the end of a flow received before its `open` is kept when the `open` never comes (`expireDueFlows` drops it). */
 export const AYNI_FLOW_EARLY_END_RETENTION_MS = 24 * 60 * 60 * 1000
@@ -89,7 +97,20 @@ export class AyniFlowService {
       throw new CredoError('ayni-flow: expiresTime must be in the future')
     }
     this.assertOrigin(options.origin)
+    if (ONE_OPEN_PER_CONNECTION.includes(options.kind)) {
+      // under a lock of the connection and kind, so that two opens at once do not both pass the check
+      return this.withFlowLock(agentContext, `connection:${options.connection.id}:${options.kind}`, async () => {
+        await this.assertNoneOpen(agentContext, options.connection.id, options.kind)
+        return this.recordOpen(agentContext, options)
+      })
+    }
+    return this.recordOpen(agentContext, options)
+  }
 
+  private async recordOpen(
+    agentContext: AgentContext,
+    options: CreateOpenOptions
+  ): Promise<{ message: AyniFlowOpenMessage; record: AyniFlowRecord }> {
     const message = new AyniFlowOpenMessage({
       kind: options.kind,
       title: options.title,
@@ -432,6 +453,17 @@ export class AyniFlowService {
   }
 
   // ---- internals -------------------------------------------------------------------------------
+
+  /** Throws `AyniFlowAlreadyOpenError` when a flow of `kind` this agent opened is still open on the connection. */
+  private async assertNoneOpen(agentContext: AgentContext, connectionId: string, kind: string): Promise<void> {
+    const now = new Date()
+    for (const open of await this.repository.findOpen(agentContext, connectionId)) {
+      if (open.kind !== kind || !open.openedByMe) continue
+      // a flow past its expires_time is closed here rather than counted
+      if (await this.expireIfDue(agentContext, open, now)) continue
+      throw new AyniFlowAlreadyOpenError(open.threadId, kind)
+    }
+  }
 
   private findMalformed(message: AyniFlowOpenMessage): string | undefined {
     if (!message.kind) return 'kind is missing'
