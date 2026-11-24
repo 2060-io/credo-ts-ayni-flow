@@ -44,21 +44,8 @@ export class PeerStatusStatusMessage extends DidCommMessage {
   public refusal?: PeerStatusRefusalModel
 
   public toStatus(): PeerStatus {
-    const { credential, issuers, obtain } = this.authentication
     return {
-      authentication: {
-        rule: this.authentication.rule,
-        ...(credential ? { credential: { jsonSchemaCredentialId: credential.jsonSchemaCredentialId } } : {}),
-        ...(issuers ? { issuers: [...issuers] } : {}),
-        ...(obtain
-          ? {
-              obtain: {
-                ...(obtain.text !== undefined ? { text: obtain.text } : {}),
-                ...(obtain.url !== undefined ? { url: obtain.url } : {}),
-              },
-            }
-          : {}),
-      },
+      authentication: this.authentication.toAuthentication(),
       identified: this.identified,
       open: [...this.open],
       ...(this.refusal

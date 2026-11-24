@@ -1,9 +1,24 @@
-import { Expose, Type } from 'class-transformer'
-import { IsArray, IsIn, IsOptional, IsString, ValidateNested } from 'class-validator'
+import { Type } from 'class-transformer'
+import { IsArray, IsIn, IsObject, IsOptional, IsString, ValidateNested } from 'class-validator'
 
-/** How the notifier identifies the receiver (profile §4.1): nothing asked, a credential it may present, one it must. */
+/** How the notifier identifies the receiver (profile §4.1): nothing asked, an authentication it may complete, one it must. */
 export const PEER_STATUS_RULES = ['none', 'optional', 'required'] as const
 export type PeerStatusRule = (typeof PEER_STATUS_RULES)[number]
+
+/** The types of an authentication method (profile §4.1). A receiver accepts a type it does not know, and cannot complete it. */
+export const PEER_STATUS_METHOD_TYPES = [
+  'credential',
+  'email',
+  'document',
+  'face-match',
+  'authenticator-app',
+  'passkey',
+] as const
+export type PeerStatusMethodType = (typeof PEER_STATUS_METHOD_TYPES)[number]
+
+/** The method types a receiver may enrol with the notifier (profile §6.4), in `enrol` and `enrolled`. */
+export const PEER_STATUS_ENROLLABLE_TYPES = ['authenticator-app', 'passkey'] as const
+export type PeerStatusEnrollableType = (typeof PEER_STATUS_ENROLLABLE_TYPES)[number]
 
 /** Why a notifier does not serve a receiver (profile §4.1). A receiver accepts a code it does not know. */
 export const PEER_STATUS_REFUSAL_CODES = [
@@ -17,12 +32,24 @@ export type PeerStatusRefusalCode = (typeof PEER_STATUS_REFUSAL_CODES)[number]
 /** What a status may list as open in this version: the conversation channel. `a2a` and `chat` are reserved. */
 export const PEER_STATUS_OPEN_AG_UI = 'ag-ui'
 
-/** The credential that identifies the receiver, by the JSON schema credential of its schema. */
+/** The credential a `credential` method asks for, by the JSON schema credential of its schema. */
 export interface PeerStatusCredential {
   jsonSchemaCredentialId: string
 }
 
-/** How the receiver obtains a credential the notifier accepts, in the notifier's words; a link when there is one. */
+/** One method the notifier accepts (profile §4.1 `authentication.methods.<name>`). */
+export interface PeerStatusMethod {
+  type: PeerStatusMethodType | string
+  /** A `credential` method only: the schema it asks for. */
+  credential?: PeerStatusCredential
+  /**
+   * A `credential` method only: the organizations whose credentials the notifier accepts, by organization key;
+   * absent when any accredited issuer of the schema is accepted.
+   */
+  issuers?: string[]
+}
+
+/** How the receiver obtains what it lacks to authenticate, in the notifier's words; a link when there is one. */
 export interface PeerStatusObtain {
   text?: string
   url?: string
@@ -30,15 +57,19 @@ export interface PeerStatusObtain {
 
 export interface PeerStatusAuthentication {
   rule: PeerStatusRule
-  /** Present with `optional` and `required`, absent with `none`. */
-  credential?: PeerStatusCredential
+  /** The methods the notifier accepts, by the name it gives each; absent with `none`. */
+  methods?: Record<string, PeerStatusMethod>
   /**
-   * The organizations whose credentials the notifier accepts, by organization key; absent when any accredited
-   * issuer of the schema is accepted. Absent with `none`.
+   * The accepted combinations, each a list of method names: the receiver is identified once every method of one of them
+   * completed in one `authenticate` flow (profile §6.14); absent with `none`.
    */
-  issuers?: string[]
+  combinations?: string[][]
   /** Absent when the notifier says nothing of it, and with `none`. */
   obtain?: PeerStatusObtain
+  /** The types the receiver may enrol with the notifier (profile §6.4); sent to an identified receiver only. */
+  enrol?: (PeerStatusEnrollableType | string)[]
+  /** The types the receiver enrolled with the notifier; sent to an identified receiver only. */
+  enrolled?: (PeerStatusEnrollableType | string)[]
 }
 
 export interface PeerStatusRefusal {
@@ -60,14 +91,45 @@ export interface PeerStatus {
   refusal?: PeerStatusRefusal
 }
 
-export class PeerStatusCredentialModel implements PeerStatusCredential {
-  public constructor(options?: PeerStatusCredential) {
-    if (options) this.jsonSchemaCredentialId = options.jsonSchemaCredentialId
-  }
+// ---- wire ---------------------------------------------------------------------------------------
 
-  @Expose({ name: 'json_schema_credential_id' })
-  @IsString()
-  public jsonSchemaCredentialId!: string
+/** A method as it travels: snake_case, as the profile writes it. */
+export interface PeerStatusMethodWire {
+  type: string
+  credential?: { json_schema_credential_id: string }
+  issuers?: string[]
+}
+
+/** A method as it travels, from the method of the API. */
+export function methodToWire(method: PeerStatusMethod): PeerStatusMethodWire {
+  return {
+    type: method.type,
+    ...(method.credential
+      ? { credential: { json_schema_credential_id: method.credential.jsonSchemaCredentialId } }
+      : {}),
+    ...(method.issuers ? { issuers: [...method.issuers] } : {}),
+  }
+}
+
+/**
+ * A method of the API, from what travelled. A value that is not a method is kept as it came, so that the validation
+ * names what is wrong with it.
+ */
+export function methodFromWire(wire: unknown): PeerStatusMethod {
+  if (typeof wire !== 'object' || wire === null || Array.isArray(wire)) return wire as PeerStatusMethod
+  const { type, credential, issuers } = wire as Partial<PeerStatusMethodWire>
+  return {
+    type: type as string,
+    ...(credential !== undefined
+      ? {
+          credential:
+            typeof credential === 'object' && credential !== null
+              ? { jsonSchemaCredentialId: credential.json_schema_credential_id }
+              : (credential as unknown as PeerStatusCredential),
+        }
+      : {}),
+    ...(issuers !== undefined ? { issuers: Array.isArray(issuers) ? [...issuers] : issuers } : {}),
+  }
 }
 
 export class PeerStatusObtainModel implements PeerStatusObtain {
@@ -91,29 +153,74 @@ export class PeerStatusAuthenticationModel {
   public constructor(options?: PeerStatusAuthentication) {
     if (options) {
       this.rule = options.rule
-      if (options.credential) this.credential = new PeerStatusCredentialModel(options.credential)
-      if (options.issuers) this.issuers = [...options.issuers]
+      if (options.methods) {
+        this.methods = Object.fromEntries(
+          Object.entries(options.methods).map(([name, method]) => [name, methodToWire(method)])
+        )
+      }
+      if (options.combinations) this.combinations = options.combinations.map((combination) => [...combination])
       if (options.obtain) this.obtain = new PeerStatusObtainModel(options.obtain)
+      if (options.enrol) this.enrol = [...options.enrol]
+      if (options.enrolled) this.enrolled = [...options.enrolled]
     }
   }
 
   @IsIn(PEER_STATUS_RULES)
   public rule!: PeerStatusRule
 
+  /** As it travels (snake_case); `toAuthentication()` gives the API's form. Checked by `validateStatus`. */
   @IsOptional()
-  @ValidateNested()
-  @Type(() => PeerStatusCredentialModel)
-  public credential?: PeerStatusCredentialModel
+  @IsObject()
+  public methods?: Record<string, PeerStatusMethodWire>
 
   @IsOptional()
   @IsArray()
-  @IsString({ each: true })
-  public issuers?: string[]
+  @IsArray({ each: true })
+  public combinations?: string[][]
 
   @IsOptional()
   @ValidateNested()
   @Type(() => PeerStatusObtainModel)
   public obtain?: PeerStatusObtainModel
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  public enrol?: string[]
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  public enrolled?: string[]
+
+  public toAuthentication(): PeerStatusAuthentication {
+    const { methods, combinations, obtain, enrol, enrolled } = this
+    return {
+      rule: this.rule,
+      ...(methods
+        ? {
+            methods: Object.fromEntries(Object.entries(methods).map(([name, wire]) => [name, methodFromWire(wire)])),
+          }
+        : {}),
+      ...(combinations
+        ? {
+            combinations: combinations.map((combination) =>
+              Array.isArray(combination) ? [...combination] : combination
+            ),
+          }
+        : {}),
+      ...(obtain
+        ? {
+            obtain: {
+              ...(obtain.text !== undefined ? { text: obtain.text } : {}),
+              ...(obtain.url !== undefined ? { url: obtain.url } : {}),
+            },
+          }
+        : {}),
+      ...(enrol ? { enrol: [...enrol] } : {}),
+      ...(enrolled ? { enrolled: [...enrolled] } : {}),
+    }
+  }
 }
 
 export class PeerStatusRefusalModel implements PeerStatusRefusal {

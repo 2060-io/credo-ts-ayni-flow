@@ -29,7 +29,7 @@ export class PeerStatusApi {
    */
   public async send(options: SendPeerStatusOptions): Promise<{ messageId: string }> {
     if (!this.config.isNotifier) throw new CredoError('peer-status: this agent is not a notifier')
-    const invalid = validateStatus(options.status, { strictRefusal: true })
+    const invalid = validateStatus(options.status, { strictRefusal: true, strictTypes: true })
     if (invalid) throw new CredoError(`peer-status: invalid status: ${invalid}`)
 
     const connectionRecord = await this.connectionService.getById(this.agentContext, options.connectionId)
