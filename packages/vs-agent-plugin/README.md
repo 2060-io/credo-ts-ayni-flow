@@ -40,7 +40,7 @@ npm audit signatures
 | `GET /v2/didcomm/ayni-flow/flows[/{flowId}]` | list or read flows |
 | `POST /v2/didcomm/ayni-flow/flows/{flowId}/close` | close with `outcome`, `reason`, `references` |
 | `POST /v2/didcomm/ayni-flow/flows/{flowId}/problem-report` | refuse or fail with a §11 code |
-| `POST /v2/didcomm/authorize`, `/confirm`, `/link-session`, `/sign-tx` | send the request (`flowId` sets `~thread.pthid`) |
+| `POST /v2/didcomm/authorize`, `/confirm`, `/link-session`, `/sign-tx` | send the request (`flowId` sets `~thread.pthid`); an authorize request may carry `approvals`, the approvals needed and the other approvers (FLOW-AUTH-004) |
 | `POST /v2/didcomm/{protocol}/{threadId}/response` | answer a received request |
 | `POST /v2/didcomm/session-grant/{threadId}/grant` | answer a session-grant request |
 | `POST /v2/didcomm/reissue/{threadId}/answered` | record that a reissue was answered |

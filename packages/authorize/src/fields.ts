@@ -1,5 +1,6 @@
 import { DateTransformer } from '@credo-ts/core'
-import { IsDate, IsIn, IsOptional, IsString } from 'class-validator'
+import { Type } from 'class-transformer'
+import { IsArray, IsBoolean, IsDate, IsIn, IsInt, IsOptional, IsString, ValidateNested } from 'class-validator'
 
 export const ATTESTATION_METHODS = ['biometric', 'passcode', 'none'] as const
 export type AttestationMethod = (typeof ATTESTATION_METHODS)[number]
@@ -19,6 +20,27 @@ export interface AuthorizePurpose {
   label: string
 }
 
+/**
+ * Another approver asked for the same request (profile §6.5): a person by `name`, or a role or a department by `label`,
+ * as the service words it; exactly one of the two. `required` as they are when the request is sent.
+ */
+export interface AuthorizeApprover {
+  name?: string
+  label?: string
+  required: boolean
+}
+
+/**
+ * Present when the request is one of several decisions (profile §6.5, FLOW-AUTH-004): `threshold`, the approvals needed
+ * in total; `others`, the other approvers asked; `own: true` when the person decides their own request, their
+ * confirmation counting as one of the approvals.
+ */
+export interface AuthorizeApprovals {
+  threshold: number
+  own: boolean
+  others: AuthorizeApprover[]
+}
+
 /** The `request` body of authorize/1.0 (profile §6.5, FLOW-AUTH-001). */
 export interface AuthorizeRequest {
   requester: AuthorizeRequester
@@ -29,6 +51,8 @@ export interface AuthorizeRequest {
   expiresAt: string
   /** `true` asks for a device-authenticated decision. */
   attested: boolean
+  /** Optional: the other decisions the request needs (FLOW-AUTH-004). Absent from the wire when absent here. */
+  approvals?: AuthorizeApprovals
 }
 
 /** How the person authenticated on the device for the decision; `none` is allowed only when `attested` was false. */
@@ -97,4 +121,58 @@ export class AttestationModel {
   @IsDate()
   @DateTransformer()
   public at!: Date
+}
+
+export class AuthorizeApproverModel {
+  public constructor(options?: AuthorizeApprover) {
+    if (options) {
+      if (options.name !== undefined) this.name = options.name
+      if (options.label !== undefined) this.label = options.label
+      this.required = options.required
+    }
+  }
+
+  @IsOptional()
+  @IsString()
+  public name?: string
+
+  @IsOptional()
+  @IsString()
+  public label?: string
+
+  @IsBoolean()
+  public required!: boolean
+
+  public toApprover(): AuthorizeApprover {
+    return {
+      ...(this.name !== undefined ? { name: this.name } : {}),
+      ...(this.label !== undefined ? { label: this.label } : {}),
+      required: this.required,
+    }
+  }
+}
+
+export class AuthorizeApprovalsModel {
+  public constructor(options?: AuthorizeApprovals) {
+    if (options) {
+      this.threshold = options.threshold
+      this.own = options.own
+      this.others = (options.others ?? []).map((other) => new AuthorizeApproverModel(other))
+    }
+  }
+
+  @IsInt()
+  public threshold!: number
+
+  @IsBoolean()
+  public own!: boolean
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AuthorizeApproverModel)
+  public others!: AuthorizeApproverModel[]
+
+  public toApprovals(): AuthorizeApprovals {
+    return { threshold: this.threshold, own: this.own, others: this.others.map((other) => other.toApprover()) }
+  }
 }

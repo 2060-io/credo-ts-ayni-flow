@@ -24,6 +24,7 @@ import {
   createVsAgentPlugin,
   FLOW_LINK_MAX_LENGTH,
   OpenFlowBodyDto,
+  SendAuthorizeBodyDto,
   setupAyniFlowProtocols,
   V2DidcommAuthorizeController,
   V2DidcommAyniFlowController,
@@ -221,6 +222,53 @@ describe('Admin API and webhook events, service to holder', () => {
     // and so is a field the route does not declare, which is why a link needed one
     await expect(validate({ ...body, other: 'x' })).rejects.toThrow()
     await expect(validate({ ...body, link: undefined })).resolves.toMatchObject({ kind: 'authorize' })
+  })
+
+  it('sends the approvals of an authorize request through the route, after its validation (FLOW-AUTH-004)', async () => {
+    const authorize = new V2DidcommAuthorizeController(service as any)
+    const [pipe] = Reflect.getMetadata(PIPES_METADATA, V2DidcommAuthorizeController) as ValidationPipe[]
+    const validate = (body: Record<string, unknown>) =>
+      pipe.transform(body, { type: 'body', metatype: SendAuthorizeBodyDto, data: '' }) as Promise<SendAuthorizeBodyDto>
+    const approvals = {
+      threshold: 2,
+      own: false,
+      others: [
+        { name: 'Jonas Weber', required: true },
+        { label: 'Finance', required: false },
+      ],
+    }
+    const body = {
+      connectionId: serviceConnectionId,
+      request: {
+        requester: { name: 'Ana Ruiz', role: 'Analyst' },
+        purpose: { id: 'customer-support', label: 'Customer support' },
+        justification: 'Ticket 4411 needs the customer address.',
+        scope: ['tool:crm.readCustomer'],
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        attested: true,
+        approvals,
+      },
+    }
+    const onHolder = waitForEvent(
+      holder,
+      'AuthorizeStateChanged' as any,
+      (e: any) => e.payload.record.state === AuthorizeState.RequestReceived && e.payload.record.request.approvals
+    )
+    const exchange = await authorize.request(await validate(body))
+    expect(exchange.request.approvals).toEqual(approvals)
+    expect(((await onHolder) as any).payload.record.request.approvals).toEqual(approvals)
+
+    // a field the route does not declare, or a threshold below one, is refused before anything is sent
+    const withApprovals = (changes: Record<string, unknown>) => ({
+      ...body,
+      request: { ...body.request, approvals: { ...approvals, ...changes } },
+    })
+    await expect(validate(withApprovals({ threshold: 0 }))).rejects.toThrow()
+    await expect(
+      validate(withApprovals({ others: [{ name: 'Jonas Weber', required: true, role: 'x' }] }))
+    ).rejects.toThrow()
+    // and the module refuses what the route lets through but the profile does not allow
+    await expect(authorize.request(await validate(withApprovals({ threshold: 4 })))).rejects.toThrow(/threshold/)
   })
 
   it("relays the holder's problem report as a failed flow with the code (CC-VSA-010)", async () => {

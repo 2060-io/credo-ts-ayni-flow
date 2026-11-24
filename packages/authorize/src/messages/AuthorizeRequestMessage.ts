@@ -1,9 +1,14 @@
 import { DateTransformer } from '@credo-ts/core'
 import { DidCommMessage, IsValidMessageType, parseMessageType } from '@credo-ts/didcomm'
 import { Expose, Type } from 'class-transformer'
-import { IsArray, IsBoolean, IsDate, IsString, ValidateNested } from 'class-validator'
+import { IsArray, IsBoolean, IsDate, IsOptional, IsString, ValidateNested } from 'class-validator'
 
-import { AuthorizePurposeModel, type AuthorizeRequest, AuthorizeRequesterModel } from '../fields'
+import {
+  AuthorizeApprovalsModel,
+  AuthorizePurposeModel,
+  type AuthorizeRequest,
+  AuthorizeRequesterModel,
+} from '../fields'
 import { AUTHORIZE_REQUEST_TYPE } from './AuthorizeProtocol'
 
 export interface AuthorizeRequestMessageOptions extends AuthorizeRequest {
@@ -26,6 +31,7 @@ export class AuthorizeRequestMessage extends DidCommMessage {
       this.scope = options.scope
       this.expiresAt = new Date(options.expiresAt)
       this.attested = options.attested
+      if (options.approvals) this.approvals = new AuthorizeApprovalsModel(options.approvals)
     }
   }
 
@@ -56,6 +62,12 @@ export class AuthorizeRequestMessage extends DidCommMessage {
   @IsBoolean()
   public attested!: boolean
 
+  /** Optional (profile §6.5, FLOW-AUTH-004): the request is one of several decisions. */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AuthorizeApprovalsModel)
+  public approvals?: AuthorizeApprovalsModel
+
   public toRequest(): AuthorizeRequest {
     return {
       requester: { name: this.requester.name, role: this.requester.role, did: this.requester.did },
@@ -64,6 +76,7 @@ export class AuthorizeRequestMessage extends DidCommMessage {
       scope: [...this.scope],
       expiresAt: this.expiresAt.toISOString(),
       attested: this.attested,
+      ...(this.approvals ? { approvals: this.approvals.toApprovals() } : {}),
     }
   }
 }
