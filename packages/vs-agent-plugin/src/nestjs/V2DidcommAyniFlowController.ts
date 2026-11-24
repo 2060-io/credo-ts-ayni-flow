@@ -52,7 +52,6 @@ export class V2DidcommAyniFlowController {
       description: body.description,
       origin: body.origin,
       expiresTime: new Date(body.expiresTime),
-      requires: body.requires,
       link: body.link,
       steps: body.steps,
     })

@@ -55,10 +55,30 @@ export type NewCodeRefusal = (typeof NEW_CODE_REFUSALS)[number]
 export const AUTHENTICATE_STEP_OUTCOMES = ['passed', 'failed', 'expired'] as const
 export type AuthenticateStepOutcome = (typeof AUTHENTICATE_STEP_OUTCOMES)[number]
 
+/**
+ * The reason of the `step-result` that ends a `face-match` step whose consent the person declined (`answer` with
+ * `consent: false`): `outcome: 'failed'`, `reason: 'consent-declined'` (§6.14, §11). The holder may then send a new
+ * `choice` on the same request, a combination that holds no method whose consent was declined.
+ */
+export const CONSENT_DECLINED = 'consent-declined'
+
 /** `expires_time` of an `authenticate` flow: fifteen minutes after the `open`, the time of every step (§6.14). */
 export const AUTHENTICATE_FLOW_EXPIRY_MS = 15 * 60 * 1000
-/** A `choice` that does not come within five minutes leaves the request unanswered (§6.14, FLOW-SIGNIN-005). */
+/**
+ * A `choice` that does not come within five minutes leaves the request unanswered (§6.14, FLOW-SIGNIN-005). The five
+ * minutes run from the `request`, and again from each `step-result` `consent-declined`, after which a new `choice` is
+ * awaited (`AuthenticateRecord.awaitingChoice`); the flow's fifteen minutes (`AUTHENTICATE_FLOW_EXPIRY_MS`) do not
+ * start again. The host enforces both.
+ */
 export const AUTHENTICATE_CHOICE_TIMEOUT_MS = 5 * 60 * 1000
+
+/**
+ * The codes an authenticator app's enrolment takes in all (§6.4): a wrong code is answered with a new
+ * `enrol-challenge`, and after the third wrong code the enrolment ends `failed`. The module refuses a fourth challenge
+ * (on the service) and fails the enrolment `malformed` on receiving one (on the holder); whether a code is right is the
+ * host's.
+ */
+export const ENROL_AUTHENTICATOR_APP_ATTEMPTS = 3
 
 /** The credential a `credential` method asks for, by the JSON schema credential of its schema. */
 export interface AuthenticationCredential {
@@ -85,7 +105,10 @@ export interface AuthenticateRequest {
   text?: string
 }
 
-/** The `choice` body: the method names of the combination the person chose. */
+/**
+ * The `choice` body: the method names of the combination the person chose. Sent once in answer to the `request`, and
+ * again after each step that ended `consent-declined`, then naming a combination that holds no declined method.
+ */
 export interface AuthenticateChoice {
   combination: string[]
 }
@@ -136,13 +159,19 @@ export interface AuthenticateAnswer {
   code?: string
   /** `email` `code`: the person asks for a new code instead. */
   newCode?: boolean
-  /** `face-match` `consent`: given; the holder answers only on the person's agreement (FLOW-SIGNIN-012). */
+  /**
+   * `face-match` `consent`: `true` on the person's agreement, before the camera opens; `false` when the person
+   * declines, which the service ends with a `step-result` `failed` `consent-declined` (FLOW-SIGNIN-012).
+   */
   consent?: boolean
   /** `passkey` `assertion`. */
   assertion?: PasskeyAssertion
 }
 
-/** The `step-result` body: the end of a step; `reason`, a code of §11, when it did not pass. */
+/**
+ * The `step-result` body: the end of a step; `reason`, a code of §11, when it did not pass (`consent-declined` for a
+ * face match whose consent the person declined).
+ */
 export interface AuthenticateStepResult {
   step: string
   outcome: AuthenticateStepOutcome

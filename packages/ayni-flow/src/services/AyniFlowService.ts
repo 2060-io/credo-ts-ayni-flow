@@ -29,7 +29,6 @@ export interface CreateOpenOptions {
   description?: string
   origin: AyniFlowOriginOptions
   expiresTime: Date
-  requires?: string[]
   /** An app link to the place where the person reads more of the request (FLOW-CORE-011). */
   link?: string
   steps?: { id: string; kind: string; title: string }[]
@@ -117,7 +116,6 @@ export class AyniFlowService {
       description: options.description,
       origin: options.origin,
       expiresTime: options.expiresTime,
-      requires: options.requires,
       link: options.link,
       steps: options.steps,
     })
@@ -133,7 +131,6 @@ export class AyniFlowService {
       description: options.description,
       origin: options.origin,
       expiresTime: options.expiresTime,
-      requires: options.requires,
       link: options.link,
       steps: options.steps,
     })
@@ -194,7 +191,6 @@ export class AyniFlowService {
         description: message.description,
         origin: { ...origin },
         expiresTime,
-        requires: message.requires,
         link: message.link,
         steps: message.steps?.map((step) => ({ id: step.id, kind: step.kind, title: step.title })),
         ...this.closingFields(earlyEnd, refusal),

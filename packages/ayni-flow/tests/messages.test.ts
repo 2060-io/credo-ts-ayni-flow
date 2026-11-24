@@ -26,7 +26,6 @@ describe('ayni-flow/1.0 messages', () => {
         client: { description: 'Firefox on Linux', platform: 'web' },
       },
       expiresTime: new Date('2026-10-24T15:32:00Z'),
-      requires: ['device-authentication'],
       steps: [{ id: '1', kind: 'present', title: 'Your badge' }],
     })
 
@@ -44,7 +43,6 @@ describe('ayni-flow/1.0 messages', () => {
         client: { description: 'Firefox on Linux', platform: 'web' },
       },
       expires_time: '2026-10-24T15:32:00.000Z',
-      requires: ['device-authentication'],
       steps: [{ id: '1', kind: 'present', title: 'Your badge' }],
     })
   })
@@ -67,6 +65,19 @@ describe('ayni-flow/1.0 messages', () => {
     expect(message.origin?.channel).toBe('none')
     expect(message.expiresTime).toBeInstanceOf(Date)
     expect(message.expiresTime?.toISOString()).toBe('2026-10-24T15:32:00.000Z')
+  })
+
+  it('sends no requires: the phone authenticates per protocol, not per flow (FLOW-CORE-010 retired)', () => {
+    // a caller still passing the removed option sends nothing of it
+    const options = {
+      kind: 'present',
+      title: 't',
+      origin: { channel: 'none' as const },
+      expiresTime: new Date('2026-11-24T22:00:00Z'),
+      requires: ['device-authentication'],
+    }
+    const message = new AyniFlowOpenMessage(options)
+    expect(JsonTransformer.toJSON(message)).not.toHaveProperty('requires')
   })
 
   it('carries the link of an open, an app link the holder offers on the sheet (FLOW-CORE-011)', () => {

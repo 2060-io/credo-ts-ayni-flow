@@ -94,7 +94,8 @@ export class V2DidcommAuthenticateController {
   @Post(':threadId/step-result')
   @ApiOperation({
     summary: 'End the current step',
-    description: 'Sends authenticate/1.0/step-result: passed, failed or expired, with a reason when it did not pass.',
+    description:
+      'Sends authenticate/1.0/step-result: passed, failed or expired, with a reason when it did not pass. A face-match step whose consent the person declined ends failed with consent-declined; a new choice is then awaited (awaitingChoice).',
   })
   @ApiCreatedResponse({ type: AuthenticateExchangeDto })
   @ApiConflictResponse({ description: CLOSED_FLOW })
@@ -106,7 +107,11 @@ export class V2DidcommAuthenticateController {
   }
 
   @Post(':threadId/choice')
-  @ApiOperation({ summary: 'Choose a combination (holder side)', description: 'Sends authenticate/1.0/choice.' })
+  @ApiOperation({
+    summary: 'Choose a combination (holder side)',
+    description:
+      'Sends authenticate/1.0/choice: in answer to the request, or again after a step that ended consent-declined, then a combination without the declined method.',
+  })
   @ApiCreatedResponse({ type: AuthenticateExchangeDto })
   @ApiConflictResponse({ description: CLOSED_FLOW })
   public async choose(
@@ -117,7 +122,10 @@ export class V2DidcommAuthenticateController {
   }
 
   @Post(':threadId/answer')
-  @ApiOperation({ summary: 'Answer a step (holder side)', description: 'Sends authenticate/1.0/answer.' })
+  @ApiOperation({
+    summary: 'Answer a step (holder side)',
+    description: 'Sends authenticate/1.0/answer; a face-match consent is true, or false when the person declines.',
+  })
   @ApiCreatedResponse({ type: AuthenticateExchangeDto })
   @ApiConflictResponse({ description: CLOSED_FLOW })
   public async answer(

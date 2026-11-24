@@ -115,6 +115,25 @@ describe('ayni-flow/1.0 between a service and a holder', () => {
     await service.modules.ayniFlow.closeFlow({ flowId: record.flowId, outcome: 'cancelled' })
   })
 
+  it('neither sends nor records a requires on an open (FLOW-CORE-010 retired)', async () => {
+    const pendingOnHolder = stateChanged(holder, AyniFlowState.Pending)
+    // a caller still passing the removed option: nothing of it leaves, nothing of it is kept
+    const options = {
+      connectionId: serviceConnection.id,
+      kind: AyniFlowKind.Present,
+      title: 'Prove you are an Acme employee',
+      origin: { channel: 'none' as const },
+      expiresTime: inAnHour(),
+      requires: ['device-authentication'],
+    }
+    const record = await service.modules.ayniFlow.openFlow(options)
+    expect(record).not.toHaveProperty('requires')
+    const holderRecord = (await pendingOnHolder).payload.flowRecord
+    expect(holderRecord.flowId).toBe(record.flowId)
+    expect(holderRecord).not.toHaveProperty('requires')
+    await service.modules.ayniFlow.closeFlow({ flowId: record.flowId, outcome: 'cancelled' })
+  })
+
   it('ignores a second close of a closed flow and keeps the first outcome', async () => {
     const record = await service.modules.ayniFlow.openFlow({
       connectionId: serviceConnection.id,

@@ -22,12 +22,16 @@ import {
   AuthenticateChoiceMessage,
   AuthenticateEventTypes,
   AuthenticateModule,
+  type AuthenticateRecord,
   type AuthenticateRequest,
   AuthenticateRole,
   AuthenticateState,
   type AuthenticateStateChangedEvent,
+  CONSENT_DECLINED,
+  EnrolChallengeMessage,
   EnrolState,
   type EnrolStateChangedEvent,
+  remainingCombinations,
   type UnenrolReceivedEvent,
 } from '../src'
 
@@ -206,10 +210,10 @@ describe('authenticate/1.0 inside an authenticate flow, between a service and a 
     expect((await passed).payload.record.findStep('1')?.result).toEqual({ step: '1', outcome: 'passed' })
 
     await say({ step: '2', method: 'face', type: 'face-match', ask: 'consent', text: 'May we film your face?' })
-    // the holder answers the consent only with the person's agreement (FLOW-SIGNIN-012)
+    // a consent is true or false, nothing else (FLOW-SIGNIN-012)
     await expect(
-      holder.modules.authenticate.answer({ threadId, answer: { step: '2', consent: false } })
-    ).rejects.toThrow(/consent is true/)
+      holder.modules.authenticate.answer({ threadId, answer: { step: '2', consent: 'yes' as never } })
+    ).rejects.toThrow(/true .* or false/)
     await answer({ step: '2', consent: true })
     // the call of the face match runs under the flow id through calls 1.0; then the result
     const faceResult = authState(holder, AuthenticateState.StepResultReceived, threadId)
@@ -248,6 +252,180 @@ describe('authenticate/1.0 inside an authenticate flow, between a service and a 
     const failedOnHolder = flowState(holder, AyniFlowState.Failed, flow.flowId)
     await service.modules.ayniFlow.sendProblemReport({ flowId: flow.flowId, code: 'malformed', description: 'x' })
     await failedOnHolder
+  })
+
+  /** Runs `[email, face]` up to the face step's consent, the email step passed. */
+  const upToTheConsent = async () => {
+    const opened = await openAuthenticate()
+    const { threadId } = opened
+    const chosen = authState(service, AuthenticateState.ChoiceReceived, threadId)
+    await holder.modules.authenticate.choose({ threadId, combination: ['email', 'face'] })
+    await chosen
+    let received = authState(holder, AuthenticateState.StepReceived, threadId)
+    await service.modules.authenticate.sendStep({
+      threadId,
+      step: { step: '1', method: 'email', type: 'email', ask: 'address' },
+    })
+    await received
+    const answered = authState(service, AuthenticateState.AnswerReceived, threadId)
+    await holder.modules.authenticate.answer({
+      threadId,
+      answer: { step: '1', address: 'ana@acme.example', locale: 'es-CO' },
+    })
+    await answered
+    const passed = authState(holder, AuthenticateState.StepResultReceived, threadId)
+    await service.modules.authenticate.sendStepResult({ threadId, result: { step: '1', outcome: 'passed' } })
+    await passed
+    received = authState(holder, AuthenticateState.StepReceived, threadId)
+    await service.modules.authenticate.sendStep({ threadId, step: consentStep })
+    await received
+    return opened
+  }
+  const consentStep = {
+    step: '2',
+    method: 'face',
+    type: 'face-match',
+    ask: 'consent' as const,
+    text: 'May we film your face?',
+  }
+
+  /** The holder declines the consent; the service ends the step consent-declined. Returns both records then. */
+  const declineTheConsent = async (threadId: string) => {
+    const answered = authState(service, AuthenticateState.AnswerReceived, threadId)
+    await holder.modules.authenticate.answer({ threadId, answer: { step: '2', consent: false } })
+    const onService = (await answered).payload.record
+    const ended = authState(holder, AuthenticateState.StepResultReceived, threadId)
+    await service.modules.authenticate.sendStepResult({
+      threadId,
+      result: { step: '2', outcome: 'failed', reason: CONSENT_DECLINED },
+    })
+    return { onService, onHolder: (await ended).payload.record as AuthenticateRecord }
+  }
+
+  it('takes a declined consent, ends the step consent-declined, and runs a new choice without the face (§6.14, FLOW-SIGNIN-012)', async () => {
+    const { flow, threadId } = await upToTheConsent()
+
+    // the person declines: the holder answers false, before any camera opens
+    const answered = authState(service, AuthenticateState.AnswerReceived, threadId)
+    await holder.modules.authenticate.answer({ threadId, answer: { step: '2', consent: false } })
+    const onService = (await answered).payload.record
+    expect(onService.findStep('2')?.answer).toEqual({ step: '2', consent: false })
+    // the service neither asks the consent again nor ends the step otherwise than consent-declined
+    await expect(service.modules.authenticate.sendStep({ threadId, step: consentStep })).rejects.toThrow(
+      /declined the consent of step '2'/
+    )
+    await expect(
+      service.modules.authenticate.sendStepResult({ threadId, result: { step: '2', outcome: 'passed' } })
+    ).rejects.toThrow(/ends failed with consent-declined/)
+    await expect(
+      service.modules.authenticate.sendStepResult({
+        threadId,
+        result: { step: '2', outcome: 'failed', reason: 'step-failed' },
+      })
+    ).rejects.toThrow(/consent-declined/)
+    const ended = authState(holder, AuthenticateState.StepResultReceived, threadId)
+    const afterResult = await service.modules.authenticate.sendStepResult({
+      threadId,
+      result: { step: '2', outcome: 'failed', reason: CONSENT_DECLINED },
+    })
+    expect(afterResult.awaitingChoice).toBe(true)
+    const onHolder = (await ended).payload.record as AuthenticateRecord
+    expect(onHolder.findStep('2')?.result).toEqual({ step: '2', outcome: 'failed', reason: 'consent-declined' })
+    expect(onHolder.awaitingChoice).toBe(true)
+    expect(onHolder.declinedMethods).toEqual(['face'])
+    expect(remainingCombinations(onHolder.request, onHolder.declinedMethods)).toEqual([['badge'], ['passport']])
+
+    // no step until the new choice; the new choice holds no declined method
+    await expect(
+      service.modules.authenticate.sendStep({ threadId, step: { step: '3', method: 'passport', type: 'document' } })
+    ).rejects.toThrow(/no step is sent until a new choice/)
+    await expect(holder.modules.authenticate.choose({ threadId, combination: ['face', 'email'] })).rejects.toThrow(
+      /holds face, whose consent the person declined/
+    )
+
+    const chosen = authState(service, AuthenticateState.ChoiceReceived, threadId)
+    const chosenOnHolder = await holder.modules.authenticate.choose({ threadId, combination: ['passport'] })
+    expect(chosenOnHolder.state).toBe(AuthenticateState.ChoiceSent)
+    const record = (await chosen).payload.record as AuthenticateRecord
+    expect(record.combination).toEqual(['passport'])
+    expect(record.steps).toEqual([])
+    expect(record.awaitingChoice).toBe(false)
+    // both attempts stay on the record: the earlier one with its steps, the current one
+    expect(
+      record.earlierAttempts.map((attempt) => ({
+        combination: attempt.combination,
+        steps: attempt.steps.map((entry) => [entry.step, entry.method, entry.result?.outcome, entry.result?.reason]),
+      }))
+    ).toEqual([
+      {
+        combination: ['face', 'email'],
+        steps: [
+          ['1', 'email', 'passed', undefined],
+          ['2', 'face', 'failed', 'consent-declined'],
+        ],
+      },
+    ])
+
+    // the new attempt runs its own steps, its ids its own
+    const received = authState(holder, AuthenticateState.StepReceived, threadId)
+    await service.modules.authenticate.sendStep({ threadId, step: { step: '1', method: 'passport', type: 'document' } })
+    const onHolderNow = (await received).payload.record as AuthenticateRecord
+    expect(onHolderNow.combination).toEqual(['passport'])
+    expect(onHolderNow.steps.map((entry) => [entry.step, entry.method])).toEqual([['1', 'passport']])
+    expect(onHolderNow.earlierAttempts).toHaveLength(1)
+    const passed = authState(holder, AuthenticateState.StepResultReceived, threadId)
+    await service.modules.authenticate.sendStepResult({ threadId, result: { step: '1', outcome: 'passed' } })
+    expect((await passed).payload.record.findStep('1')?.result).toEqual({ step: '1', outcome: 'passed' })
+    // a passed step awaits no choice: a third choice is refused before it leaves the phone
+    await expect(holder.modules.authenticate.choose({ threadId, combination: ['badge'] })).rejects.toThrow(
+      /waits for no choice/
+    )
+
+    const completed = flowState(holder, AyniFlowState.Completed, flow.flowId)
+    await service.modules.ayniFlow.closeFlow({ flowId: flow.flowId, outcome: 'completed' })
+    await completed
+  })
+
+  it('fails malformed a new choice that holds the declined method (§6.14)', async () => {
+    const { flow, threadId } = await upToTheConsent()
+    const { onHolder } = await declineTheConsent(threadId)
+    expect(onHolder.awaitingChoice).toBe(true)
+    const failed = authState(service, AuthenticateState.Failed, threadId)
+    await sendRaw(
+      holder as Agent<any>,
+      holderConnection,
+      new AuthenticateChoiceMessage({ threadId, parentThreadId: flow.flowId, combination: ['face', 'email'] })
+    )
+    const record = (await failed).payload.record
+    expect(record.errorCode).toBe('malformed')
+    expect(record.errorDescription).toMatch(/holds face, whose consent the person declined/)
+    await service.modules.ayniFlow.sendProblemReport({ flowId: flow.flowId, code: 'malformed' })
+  })
+
+  it('takes no second choice but after a declined consent: a repeat is ignored, another fails malformed', async () => {
+    const { flow, threadId } = await openAuthenticate()
+    const chosen = authState(service, AuthenticateState.ChoiceReceived, threadId)
+    await holder.modules.authenticate.choose({ threadId, combination: ['badge'] })
+    await chosen
+    // the holder's own API refuses it
+    await expect(holder.modules.authenticate.choose({ threadId, combination: ['passport'] })).rejects.toThrow(
+      /waits for no choice/
+    )
+    const failed = authState(service, AuthenticateState.Failed, threadId)
+    const raw = (combination: string[]) =>
+      sendRaw(
+        holder as Agent<any>,
+        holderConnection,
+        new AuthenticateChoiceMessage({ threadId, parentThreadId: flow.flowId, combination })
+      )
+    // the same choice delivered twice is ignored; another choice fails the exchange
+    await raw(['badge'])
+    await raw(['passport'])
+    const record = (await failed).payload.record
+    expect(record.errorCode).toBe('malformed')
+    expect(record.errorDescription).toMatch(/choice \[passport\] comes while no choice is awaited/)
+    expect(record.combination).toEqual(['badge'])
+    await service.modules.ayniFlow.sendProblemReport({ flowId: flow.flowId, code: 'malformed' })
   })
 
   it('answers no step its carrier answers, and sends nothing in a flow that is closed (FLOW-CORE-005)', async () => {
@@ -363,6 +541,28 @@ describe('authenticate/1.0 inside an authenticate flow, between a service and a 
     const again = enrolState(holder, EnrolState.ChallengeReceived, sent.threadId)
     await service.modules.authenticate.sendEnrolChallenge({ threadId: sent.threadId, challenge })
     expect((await again).payload.record.challenges).toBe(2)
+
+    // three codes in all: the third challenge is the last, a fourth is refused (§6.4)
+    const wrongAgain = enrolState(service, EnrolState.AnswerReceived, sent.threadId)
+    await holder.modules.authenticate.answerEnrol({ threadId: sent.threadId, answer: { code: '111111' } })
+    await wrongAgain
+    const third = enrolState(holder, EnrolState.ChallengeReceived, sent.threadId)
+    await service.modules.authenticate.sendEnrolChallenge({ threadId: sent.threadId, challenge })
+    expect((await third).payload.record.challenges).toBe(3)
+    const wrongThird = enrolState(service, EnrolState.AnswerReceived, sent.threadId)
+    await holder.modules.authenticate.answerEnrol({ threadId: sent.threadId, answer: { code: '222222' } })
+    await wrongThird
+    await expect(
+      service.modules.authenticate.sendEnrolChallenge({ threadId: sent.threadId, challenge })
+    ).rejects.toThrow(/3 codes in all/)
+    // a holder that receives a fourth fails the enrolment malformed
+    const failed = enrolState(holder, EnrolState.Failed, sent.threadId)
+    await sendRaw(
+      service as Agent<any>,
+      serviceConnection,
+      new EnrolChallengeMessage({ ...challenge, threadId: sent.threadId, parentThreadId: sent.parentThreadId })
+    )
+    expect((await failed).payload.record).toMatchObject({ errorCode: 'malformed' })
   })
 
   it('relays an unenrol outside any flow to the service, which alone takes it (§6.4, FLOW-SIGNIN-014)', async () => {

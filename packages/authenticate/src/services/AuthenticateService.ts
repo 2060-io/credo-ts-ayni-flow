@@ -2,15 +2,17 @@ import type { AgentContext, Logger, Query, QueryOptions } from '@credo-ts/core'
 import { CredoError, EventEmitter, InjectionSymbols, inject, injectable } from '@credo-ts/core'
 import type { DidCommConnectionRecord, DidCommInboundMessageContext } from '@credo-ts/didcomm'
 
-import type {
-  AuthenticateAnswer,
-  AuthenticateChoice,
-  AuthenticateRequest,
-  AuthenticateStep,
-  AuthenticateStepResult,
-  EnrolAnswer,
-  EnrolChallenge,
-  EnrollableMethodType,
+import {
+  type AuthenticateAnswer,
+  type AuthenticateChoice,
+  type AuthenticateRequest,
+  type AuthenticateStep,
+  type AuthenticateStepResult,
+  CONSENT_DECLINED,
+  ENROL_AUTHENTICATOR_APP_ATTEMPTS,
+  type EnrolAnswer,
+  type EnrolChallenge,
+  type EnrollableMethodType,
 } from '../fields'
 import {
   AuthenticateAnswerMessage,
@@ -59,6 +61,13 @@ export interface CreateEnrolRequestOptions {
 
 /** What a step carries that the person answers: its `ask`. A step without one is answered by its carrier. */
 const awaitsAnswer = (step: AuthenticateStep) => step.ask !== undefined
+
+/** Whether two lists name the same methods, in any order. */
+const sameMethods = (a: string[], b: string[]) => a.length === b.length && a.every((name) => b.includes(name))
+
+/** The methods of a combination whose consent the person declined in an earlier step of the exchange. */
+const declinedIn = (record: AuthenticateRecord, combination: string[]) =>
+  record.declinedMethods.filter((name) => combination.includes(name))
 
 /** The challenge as the record keeps it: an authenticator app's secret and link are not kept (agent D129). */
 const keptChallenge = (challenge: EnrolChallenge): EnrolChallenge => {
@@ -109,16 +118,32 @@ export class AuthenticateService {
 
   /**
    * Receives the `choice`: it must be one of the request's combinations, or the exchange fails `malformed` and the
-   * service refuses it with that code (FLOW-SIGNIN-008). A second choice is ignored.
+   * service refuses it with that code (FLOW-SIGNIN-008). A choice comes in answer to the request, and again after a
+   * step that ended `consent-declined`, then naming a combination that holds no declined method (§6.14); the attempt
+   * before is kept in `earlierAttempts`. Any other choice fails `malformed`, but one that repeats the combination being
+   * run, a message delivered twice, is ignored.
    */
   public async processChoice(
     messageContext: DidCommInboundMessageContext<AuthenticateChoiceMessage>
   ): Promise<AuthenticateRecord | null> {
     const { message, agentContext } = messageContext
     return this.withAnswered(messageContext, message.threadId, 'choice', async (record) => {
-      if (record.role !== AuthenticateRole.Requester || record.state !== AuthenticateState.RequestSent) {
-        this.logger.debug(`authenticate: ignoring choice of '${record.threadId}' in state ${record.state}`)
+      if (record.role !== AuthenticateRole.Requester) {
+        this.logger.debug(`authenticate: ignoring choice of '${record.threadId}', which this agent did not request`)
         return null
+      }
+      const named = `[${message.combination.join(', ')}]`
+      if (!record.awaitingChoice) {
+        if (record.combination && sameMethods(message.combination, record.combination)) {
+          this.logger.debug(`authenticate: ignoring choice of '${record.threadId}' repeating the combination being run`)
+          return null
+        }
+        return this.failRecord(
+          agentContext,
+          record,
+          'malformed',
+          `the choice ${named} comes while no choice is awaited: a choice answers the request, or a step that ended ${CONSENT_DECLINED}`
+        )
       }
       const combination = findChosenCombination(record.request, message.toChoice())
       if (!combination) {
@@ -126,10 +151,19 @@ export class AuthenticateService {
           agentContext,
           record,
           'malformed',
-          `the choice [${message.combination.join(', ')}] is not one of the request's combinations`
+          `the choice ${named} is not one of the request's combinations`
         )
       }
-      record.combination = combination
+      const declined = declinedIn(record, combination)
+      if (declined.length) {
+        return this.failRecord(
+          agentContext,
+          record,
+          'malformed',
+          `the choice ${named} holds ${declined.join(', ')}, whose consent the person declined`
+        )
+      }
+      record.chooseCombination(combination)
       await this.updateState(agentContext, record, AuthenticateState.ChoiceReceived)
       return record
     })
@@ -154,6 +188,8 @@ export class AuthenticateService {
         AuthenticateState.AnswerReceived,
         AuthenticateState.StepResultSent,
       ])
+      if (record.awaitingChoice)
+        throw new CredoError(`authenticate: the person declined a consent; no step is sent until a new choice comes`)
       const combination = record.combination as string[]
       const invalid = validateStep(record.request, combination, step)
       if (invalid) throw new CredoError(`authenticate: invalid step: ${invalid}`)
@@ -164,6 +200,10 @@ export class AuthenticateService {
           throw new CredoError(`authenticate: step '${step.step}' has ended; only the current step is sent again`)
         if (existing.method !== step.method)
           throw new CredoError(`authenticate: step '${step.step}' runs ${existing.method}`)
+        if (existing.answer?.consent === false)
+          throw new CredoError(
+            `authenticate: the person declined the consent of step '${step.step}'; end it failed with ${CONSENT_DECLINED}`
+          )
         existing.prompt = { ...step }
         existing.awaitingAnswer = awaitsAnswer(step)
       } else {
@@ -226,10 +266,10 @@ export class AuthenticateService {
       const record = await this.getByThreadId(agentContext, threadId)
       record.assertRole(AuthenticateRole.Requester)
       record.assertState([AuthenticateState.StepSent, AuthenticateState.AnswerReceived])
-      const invalid = validateStepResult(result)
-      if (invalid) throw new CredoError(`authenticate: invalid step-result: ${invalid}`)
       const entry = record.findStep(result.step)
       if (!entry || entry.result) throw new CredoError(`authenticate: step '${result.step}' is not running`)
+      const invalid = validateStepResult(result, entry)
+      if (invalid) throw new CredoError(`authenticate: invalid step-result: ${invalid}`)
 
       entry.result = { ...result }
       entry.awaitingAnswer = false
@@ -275,7 +315,11 @@ export class AuthenticateService {
     })
   }
 
-  /** Builds the `choice` of a combination the person chose; it must be one of the request's. */
+  /**
+   * Builds the `choice` of a combination the person chose; it must be one of the request's. Sent in answer to the
+   * request, and again after a step that ended `consent-declined`, then for a combination that holds no declined
+   * method (§6.14).
+   */
   public async createChoice(
     agentContext: AgentContext,
     threadId: string,
@@ -284,11 +328,17 @@ export class AuthenticateService {
     return this.withLock(agentContext, threadId, async () => {
       const record = await this.getByThreadId(agentContext, threadId)
       record.assertRole(AuthenticateRole.Authenticator)
-      record.assertState(AuthenticateState.RequestReceived)
+      if (!record.awaitingChoice)
+        throw new CredoError(
+          `authenticate: exchange '${threadId}' (${record.state}) waits for no choice: a choice answers the request, or a step that ended ${CONSENT_DECLINED}`
+        )
       const combination = findChosenCombination(record.request, choice)
       if (!combination) throw new CredoError("authenticate: the choice is not one of the request's combinations")
+      const declined = declinedIn(record, combination)
+      if (declined.length)
+        throw new CredoError(`authenticate: the choice holds ${declined.join(', ')}, whose consent the person declined`)
 
-      record.combination = combination
+      record.chooseCombination(combination)
       const message = new AuthenticateChoiceMessage({
         combination: [...choice.combination],
         threadId: record.threadId,
@@ -305,10 +355,12 @@ export class AuthenticateService {
   ): Promise<AuthenticateRecord | null> {
     const { message, agentContext } = messageContext
     return this.withAnswered(messageContext, message.threadId, 'step', async (record) => {
-      if (record.role !== AuthenticateRole.Authenticator || !record.combination) {
+      // no step before a choice, nor after a declined consent until the new choice
+      if (record.role !== AuthenticateRole.Authenticator || record.awaitingChoice) {
         this.logger.debug(`authenticate: ignoring step of '${record.threadId}' in state ${record.state}`)
         return null
       }
+      if (!record.combination) return null
       const step = message.toStep()
       const invalid = validateStep(record.request, record.combination, step)
       if (invalid) return this.failRecord(agentContext, record, 'malformed', invalid)
@@ -374,7 +426,7 @@ export class AuthenticateService {
         return null
       }
       const result = message.toStepResult()
-      const invalid = validateStepResult(result)
+      const invalid = validateStepResult(result, entry)
       if (invalid) return this.failRecord(agentContext, record, 'malformed', invalid)
       entry.result = result
       entry.awaitingAnswer = false
@@ -449,6 +501,10 @@ export class AuthenticateService {
       record.assertState([EnrolState.RequestReceived, EnrolState.AnswerReceived])
       const invalid = validateEnrolChallenge({ type: record.enrolType }, challenge)
       if (invalid) throw new CredoError(`authenticate: invalid enrol-challenge: ${invalid}`)
+      if (record.enrolType === 'authenticator-app' && record.challenges >= ENROL_AUTHENTICATOR_APP_ATTEMPTS)
+        throw new CredoError(
+          `authenticate: an authenticator app's enrolment takes ${ENROL_AUTHENTICATOR_APP_ATTEMPTS} codes in all; after the last wrong code it ends failed`
+        )
 
       const message = new EnrolChallengeMessage({
         ...challenge,
@@ -476,7 +532,11 @@ export class AuthenticateService {
         return null
       }
       const challenge = message.toChallenge()
-      const invalid = validateEnrolChallenge({ type: record.enrolType }, challenge)
+      const invalid =
+        validateEnrolChallenge({ type: record.enrolType }, challenge) ??
+        (record.enrolType === 'authenticator-app' && record.challenges >= ENROL_AUTHENTICATOR_APP_ATTEMPTS
+          ? `an authenticator app's enrolment takes ${ENROL_AUTHENTICATOR_APP_ATTEMPTS} codes in all`
+          : undefined)
       if (invalid) return this.failEnrolRecord(agentContext, record, 'malformed', invalid)
       record.challenge = keptChallenge(challenge)
       record.challenges += 1
