@@ -24,12 +24,12 @@ import {
   createVsAgentPlugin,
   FLOW_LINK_MAX_LENGTH,
   OpenFlowBodyDto,
-  SendPeerStatusBodyDto,
   setupAyniFlowProtocols,
   V2DidcommAuthorizeController,
   V2DidcommAyniFlowController,
   V2DidcommPeerStatusController,
 } from '../src'
+import { SendPeerStatusBodyDto } from '../src/nestjs/dto/carriers.dto.js'
 
 describe('plugin shape', () => {
   it('builds a VS Agent plugin with the nine modules, ten controllers and the routing table', () => {
