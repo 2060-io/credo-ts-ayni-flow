@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.11](https://github.com/2060-io/credo-ts-ayni-flow/compare/vs-agent-plugin-ayni-flow@v0.1.10...vs-agent-plugin-ayni-flow@v0.1.11) (2026-11-24)
+
+
+### Features
+
+* **authorize:** a request may carry approvals, the approvals needed and the other approvers (FLOW-AUTH-004) ([62c52ea](https://github.com/2060-io/credo-ts-ayni-flow/commit/62c52ea5eb19f3247b929386c279a083d3a50e36))
+* **authorize:** a request may carry approvals, the approvals needed and the other approvers (FLOW-AUTH-004) ([c282b88](https://github.com/2060-io/credo-ts-ayni-flow/commit/c282b8842aff3d2aac57abcf1ee1c951b24a7184))
+
 ## [0.1.10](https://github.com/2060-io/credo-ts-ayni-flow/compare/vs-agent-plugin-ayni-flow@v0.1.9...vs-agent-plugin-ayni-flow@v0.1.10) (2026-11-22)
 
 
