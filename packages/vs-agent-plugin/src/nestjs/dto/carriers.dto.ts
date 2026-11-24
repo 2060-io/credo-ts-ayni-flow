@@ -4,11 +4,13 @@ import {
   IsArray,
   IsBoolean,
   IsIn,
+  IsInt,
   IsISO8601,
   IsNotEmpty,
   IsObject,
   IsOptional,
   IsString,
+  Min,
   ValidateNested,
 } from 'class-validator'
 
@@ -45,6 +47,46 @@ export class AuthorizePurposeDto {
   label!: string
 }
 
+export class AuthorizeApproverDto {
+  @ApiPropertyOptional({ description: 'A person, by name; or give a label', example: 'Jonas Weber' })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  name?: string
+
+  @ApiPropertyOptional({
+    description: 'A role or a department, as the service words it; or give a name',
+    example: 'Finance',
+  })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  label?: string
+
+  @ApiProperty({ description: 'Whether this approver must approve, as it is when the request is sent' })
+  @IsBoolean()
+  required!: boolean
+}
+
+export class AuthorizeApprovalsDto {
+  @ApiProperty({ description: 'The approvals needed in total', example: 2 })
+  @IsInt()
+  @Min(1)
+  threshold!: number
+
+  @ApiProperty({
+    description: 'true when the person decides their own request, their confirmation counting as one of the approvals',
+  })
+  @IsBoolean()
+  own!: boolean
+
+  @ApiProperty({ type: [AuthorizeApproverDto], description: 'The other approvers asked' })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AuthorizeApproverDto)
+  others!: AuthorizeApproverDto[]
+}
+
 export class AuthorizeRequestDto {
   @ApiProperty({ type: AuthorizeRequesterDto })
   @ValidateNested()
@@ -72,6 +114,16 @@ export class AuthorizeRequestDto {
   @ApiProperty({ description: 'Ask for a device-authenticated decision' })
   @IsBoolean()
   attested!: boolean
+
+  @ApiPropertyOptional({
+    type: AuthorizeApprovalsDto,
+    description:
+      'When the request is one of several decisions: the approvals needed and the other approvers (FLOW-AUTH-004)',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AuthorizeApprovalsDto)
+  approvals?: AuthorizeApprovalsDto
 }
 
 export class SendAuthorizeBodyDto extends CarrierRequestBaseDto {

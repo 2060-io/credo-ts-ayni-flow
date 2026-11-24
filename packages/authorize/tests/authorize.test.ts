@@ -27,6 +27,7 @@ import {
   AuthorizeRole,
   AuthorizeState,
   type AuthorizeStateChangedEvent,
+  validateRequest,
 } from '../src'
 
 const request = {
@@ -70,6 +71,43 @@ describe('authorize/1.0 messages', () => {
       attestation: { method: 'biometric', at: '2026-10-24T15:21:03.000Z' },
       comment: null,
     })
+  })
+
+  it('serialises the approvals of a request that is one of several decisions, and omits them otherwise (FLOW-AUTH-004)', () => {
+    const approvals = {
+      threshold: 2,
+      own: false,
+      others: [
+        { name: 'Jonas Weber', required: true },
+        { label: 'Finance', required: false },
+      ],
+    }
+    const message = new AuthorizeRequestMessage({ ...request, approvals, id: 'req-2', parentThreadId: 'f1ow-2' })
+    const json = JsonTransformer.toJSON(message)
+    expect(json.approvals).toEqual(approvals)
+    expect(JsonTransformer.fromJSON(json, AuthorizeRequestMessage).toRequest()).toEqual({ ...request, approvals })
+    expect(JsonTransformer.toJSON(new AuthorizeRequestMessage({ ...request, id: 'req-3' }))).not.toHaveProperty(
+      'approvals'
+    )
+  })
+
+  it('checks the approvals against the profile (FLOW-AUTH-004)', () => {
+    const approvals = { threshold: 2, own: true, others: [{ name: 'Jonas Weber', required: true }] }
+    expect(validateRequest({ ...request, approvals })).toBeUndefined()
+    expect(validateRequest({ ...request, approvals: { ...approvals, others: [], threshold: 1 } })).toBeUndefined()
+    expect(validateRequest({ ...request, approvals: { ...approvals, threshold: 0 } })).toMatch(/threshold/)
+    expect(validateRequest({ ...request, approvals: { ...approvals, threshold: 1.5 } })).toMatch(/threshold/)
+    expect(validateRequest({ ...request, approvals: { ...approvals, threshold: 3 } })).toMatch(/threshold/)
+    expect(
+      validateRequest({ ...request, approvals: { ...approvals, others: [{ name: 'A', label: 'B', required: true }] } })
+    ).toMatch(/exactly one/)
+    expect(validateRequest({ ...request, approvals: { ...approvals, others: [{ required: true }] } })).toMatch(
+      /exactly one/
+    )
+    expect(validateRequest({ ...request, approvals: { ...approvals, others: [{ name: 'A' } as never] } })).toMatch(
+      /required/
+    )
+    expect(validateRequest({ ...request, approvals: { ...approvals, own: 'no' as never } })).toMatch(/own/)
   })
 
   it('rejects a response with an unknown decision at parse time', () => {
@@ -185,6 +223,43 @@ describe('authorize/1.0 inside an ayni-flow, between a service and a holder', ()
     const completedOnHolder = flowState(holder, AyniFlowState.Completed, flow.flowId)
     await service.modules.ayniFlow.closeFlow({ flowId: flow.flowId, outcome: 'completed' })
     await completedOnHolder
+  })
+
+  it('carries the approvals to the holder, and refuses to send approvals the profile does not allow (FLOW-AUTH-004)', async () => {
+    const approvals = { threshold: 2, own: true, others: [{ label: 'Finance', required: true }] }
+    const sent = await service.modules.authorize.request({
+      connectionId: serviceConnection.id,
+      request: { ...request, approvals },
+    })
+    expect(sent.request.approvals).toEqual(approvals)
+    const received = (await authorizeState(holder, AuthorizeState.RequestReceived, sent.threadId)).payload.record
+    expect(received.request.approvals).toEqual(approvals)
+
+    await expect(
+      service.modules.authorize.request({
+        connectionId: serviceConnection.id,
+        request: { ...request, approvals: { ...approvals, threshold: 5 } },
+      })
+    ).rejects.toThrow(/threshold/)
+  })
+
+  it('fails the exchange on the approver when a forged request carries approvals the profile does not allow', async () => {
+    const { DidCommMessageSender, getOutboundDidCommMessageContext } = await import('@credo-ts/didcomm')
+    const service$ = service as Agent<any>
+    const forged = new AuthorizeRequestMessage({
+      ...request,
+      approvals: { threshold: 4, own: false, others: [{ name: 'Jonas Weber', required: true }] },
+    })
+    const failedOnHolder = authorizeState(holder, AuthorizeState.Failed, forged.id)
+    await service$.dependencyManager.resolve(DidCommMessageSender).sendMessage(
+      await getOutboundDidCommMessageContext(service$.context, {
+        message: forged,
+        connectionRecord: serviceConnection,
+      })
+    )
+    const failed = (await failedOnHolder).payload.record
+    expect(failed.errorCode).toBe('malformed')
+    expect(failed.errorDescription).toMatch(/threshold/)
   })
 
   it('fails the exchange on the requester when a forged response breaks the attestation rule', async () => {
