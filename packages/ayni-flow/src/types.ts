@@ -30,7 +30,8 @@ export enum AyniFlowKind {
   Present = 'present',
   Issue = 'issue',
   NfcRead = 'nfc-read',
-  Call = 'call',
+  /** Opened by the holder to add an authenticator app or a passkey (§6.4); carrier authenticate 1.0. */
+  Enrol = 'enrol',
   Authorize = 'authorize',
   Confirm = 'confirm',
   LinkSession = 'link-session',
@@ -40,7 +41,7 @@ export enum AyniFlowKind {
   Reissue = 'reissue',
   Revoked = 'revoked',
   IdentifyUa = 'identify-ua',
-  /** The presentation by which a person authenticates to a service (§6.14). */
+  /** How a person authenticates to a service, by one accepted combination of methods (§6.14); carrier authenticate 1.0. */
   Authenticate = 'authenticate',
 }
 
@@ -49,10 +50,14 @@ export const DEFAULT_HOLDER_KINDS: readonly string[] = Object.values(AyniFlowKin
   (kind) => kind !== AyniFlowKind.IdentifyUa
 )
 
-/** Kinds a service accepts from a holder: the holder-initiated ones (§6: `session-grant`, `reissue`, the `present` proposal). */
+/**
+ * Kinds a service accepts from a holder: the holder-initiated ones (§6: `session-grant`, `reissue`, `enrol`, the
+ * `present` proposal).
+ */
 export const DEFAULT_SERVICE_KINDS: readonly string[] = [
   AyniFlowKind.SessionGrant,
   AyniFlowKind.Reissue,
+  AyniFlowKind.Enrol,
   AyniFlowKind.Present,
 ]
 
@@ -69,15 +74,24 @@ export enum AyniFlowErrorCode {
   SummaryMismatch = 'summary-mismatch',
   WrongChain = 'wrong-chain',
   ReadFailed = 'read-failed',
-  FaceMatchFailed = 'face-match-failed',
   NotEligible = 'not-eligible',
   UnknownReference = 'unknown-reference',
   NotAccepted = 'not-accepted',
   NotFlowCapable = 'not-flow-capable',
-  /** A presentation in an `authenticate` flow that the service does not accept (§6.14); the service asks again. */
+  /** The presentation of a `credential` step of an `authenticate` flow was not accepted (§6.14); the service asks again. */
   IssuerNotAccepted = 'issuer-not-accepted',
+  /** Also closes an `nfc-read` whose data the service does not accept, and an `enrol` whose answer does not verify. */
   NotValid = 'not-valid',
   Incomplete = 'incomplete',
+  /** A step of another method of an `authenticate` flow failed (§6.14); the service asks again. */
+  StepFailed = 'step-failed',
+  /** A step of another method of an `authenticate` flow expired (§6.14); the service asks again. */
+  StepExpired = 'step-expired',
+  /** What a step proved matches no identity the service knows (§6.14); the service asks again. */
+  NoMatch = 'no-match',
+  /** The methods of the combination found different people (§6.14); the service asks again. */
+  DifferentIdentities = 'different-identities',
+  /** The authentication found another person than the one the connection is identified as; the service does not ask again. */
   AnotherIdentity = 'another-identity',
 }
 

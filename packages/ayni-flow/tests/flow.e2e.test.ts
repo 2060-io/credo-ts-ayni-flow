@@ -12,6 +12,7 @@ import { DidCommBasicMessage, DidCommMessageSender, getOutboundDidCommMessageCon
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import {
+  AyniFlowAlreadyOpenError,
   AyniFlowClosedError,
   AyniFlowErrorCode,
   AyniFlowEventTypes,
@@ -190,8 +191,81 @@ describe('ayni-flow/1.0 between a service and a holder', () => {
       AyniFlowErrorCode.IssuerNotAccepted,
       AyniFlowErrorCode.NotValid,
       AyniFlowErrorCode.Incomplete,
+      AyniFlowErrorCode.StepFailed,
+      AyniFlowErrorCode.StepExpired,
+      AyniFlowErrorCode.NoMatch,
+      AyniFlowErrorCode.DifferentIdentities,
       AyniFlowErrorCode.AnotherIdentity,
-    ]).toEqual(['issuer-not-accepted', 'not-valid', 'incomplete', 'another-identity'])
+    ]).toEqual([
+      'issuer-not-accepted',
+      'not-valid',
+      'incomplete',
+      'step-failed',
+      'step-expired',
+      'no-match',
+      'different-identities',
+      'another-identity',
+    ])
+    // the codes of §11, and no other: the call kind and its face-match-failed are gone
+    expect(Object.values(AyniFlowErrorCode)).not.toContain('face-match-failed')
+  })
+
+  it('keeps one authenticate flow open per connection on the side that opens it, with a 409 (FLOW-SIGNIN-001)', async () => {
+    const open = () =>
+      service.modules.ayniFlow.openFlow({
+        connectionId: serviceConnection.id,
+        kind: AyniFlowKind.Authenticate,
+        title: 'Authenticate to Acme',
+        origin: { channel: 'none' },
+        expiresTime: inAnHour(),
+      })
+    const first = await open()
+    await stateChanged(holder, AyniFlowState.Pending, first.flowId)
+    const second = open()
+    await expect(second).rejects.toBeInstanceOf(AyniFlowAlreadyOpenError)
+    await expect(second).rejects.toMatchObject({ status: 409, flowId: first.flowId, kind: 'authenticate' })
+    expect(
+      (await service.modules.ayniFlow.findAllByQuery({ kind: 'authenticate', connectionId: serviceConnection.id }))
+        .filter((flow) => !flow.isClosed)
+        .map((flow) => flow.flowId)
+    ).toEqual([first.flowId])
+
+    // once the first has an outcome, the service asks again (§6.14: a new flow after a refused authentication)
+    const failed = stateChanged(holder, AyniFlowState.Failed, first.flowId)
+    await service.modules.ayniFlow.sendProblemReport({ flowId: first.flowId, code: AyniFlowErrorCode.StepFailed })
+    await failed
+    const next = await open()
+    await stateChanged(holder, AyniFlowState.Pending, next.flowId)
+    const cancelled = stateChanged(holder, AyniFlowState.Cancelled, next.flowId)
+    await service.modules.ayniFlow.closeFlow({ flowId: next.flowId, outcome: 'cancelled' })
+    await cancelled
+  })
+
+  it('takes an enrol flow from the holder, and no longer knows the call kind (§6.4, §6)', async () => {
+    const enrol = await holder.modules.ayniFlow.openFlow({
+      connectionId: holderConnection.id,
+      kind: AyniFlowKind.Enrol,
+      title: 'Add a passkey',
+      origin: { channel: 'none' },
+      expiresTime: inAnHour(),
+    })
+    expect((await stateChanged(service, AyniFlowState.Pending, enrol.flowId)).payload.flowRecord.kind).toBe('enrol')
+    const cancelled = stateChanged(service, AyniFlowState.Cancelled, enrol.flowId)
+    await holder.modules.ayniFlow.closeFlow({ flowId: enrol.flowId, outcome: 'cancelled' })
+    await cancelled
+
+    expect(Object.values(AyniFlowKind)).not.toContain('call')
+    const refused = stateChanged(service, AyniFlowState.Failed)
+    const call = await service.modules.ayniFlow.openFlow({
+      connectionId: serviceConnection.id,
+      kind: 'call',
+      title: 'Video call',
+      origin: { channel: 'none' },
+      expiresTime: inAnHour(),
+    })
+    const record = (await refused).payload.flowRecord
+    expect(record.flowId).toBe(call.flowId)
+    expect(record.errorCode).toBe('unsupported-kind')
   })
 
   it('refuses an unsupported kind with a problem report and records the refusal', async () => {

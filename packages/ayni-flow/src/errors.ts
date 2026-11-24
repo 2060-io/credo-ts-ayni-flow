@@ -20,3 +20,21 @@ export class AyniFlowClosedError extends CredoError {
     this.name = 'AyniFlowClosedError'
   }
 }
+
+/**
+ * A flow of this kind is already open on the connection, and the profile allows one at a time: a service keeps at most
+ * one `authenticate` flow pending on a connection (§6.14, FLOW-SIGNIN-001).
+ */
+export class AyniFlowAlreadyOpenError extends CredoError {
+  /** 409 Conflict, for a host that answers over HTTP, as `AyniFlowClosedError`. */
+  public readonly status = 409
+
+  public constructor(
+    /** The flow that is still open. */
+    public readonly flowId: string,
+    public readonly kind: string
+  ) {
+    super(`ayni-flow: a flow of kind '${kind}' is already open on the connection ('${flowId}'); close it first`)
+    this.name = 'AyniFlowAlreadyOpenError'
+  }
+}
