@@ -50,9 +50,9 @@ npm audit signatures
 | `POST /v2/didcomm/peer-status/query`, `GET /v2/didcomm/peer-status/{connectionId}` | ask a peer for its status of this agent; read the last status sent and received on a connection |
 | `POST /v2/didcomm/revocation-notification` | send `revocation_notification/2.0/revoke` |
 | `POST /v2/didcomm/authenticate` | ask the person to authenticate inside an `authenticate` flow (`flowId`): `purpose`, `methods`, `combinations`, `text` for a step-up |
-| `POST /v2/didcomm/authenticate/{threadId}/step`, `.../step-result` | announce a step of the combination chosen (the identifying methods first) or send it again; end it `passed`, `failed` or `expired` |
-| `POST /v2/didcomm/authenticate/{threadId}/choice`, `.../answer` | the holder's side, for tests and tooling |
-| `POST /v2/didcomm/authenticate-enrol/{threadId}/challenge` | answer an `enrol-request` with a passkey's creation options or an authenticator app's secret; again after a wrong code. The secret is sent, never kept |
+| `POST /v2/didcomm/authenticate/{threadId}/step`, `.../step-result` | announce a step of the combination chosen (the identifying methods first) or send it again; end it `passed`, `failed` or `expired`. A face-match step whose consent the person declined (`consent: false`) ends `failed` with `reason: consent-declined`, after which a new choice is awaited |
+| `POST /v2/didcomm/authenticate/{threadId}/choice`, `.../answer` | the holder's side, for tests and tooling: a choice in answer to the request, or again after a `consent-declined` step without the declined method; an answer, a consent `true` or `false` |
+| `POST /v2/didcomm/authenticate-enrol/{threadId}/challenge` | answer an `enrol-request` with a passkey's creation options or an authenticator app's secret; again after a wrong code, three codes in all for an authenticator app (a fourth challenge is refused). The secret is sent, never kept |
 | `POST /v2/didcomm/authenticate-enrol`, `.../{threadId}/answer`, `.../unenrol` | the holder's side, for tests and tooling |
 | `GET /v2/didcomm/authenticate[-enrol][/{threadId}]`, `POST .../{threadId}/fail` | read authentications and enrolments, record a controller-side failure |
 | `GET /v2/didcomm/{protocol}[/{threadId}]`, `POST .../{threadId}/fail` | read exchanges, record a controller-side failure |
@@ -64,7 +64,10 @@ failed` with `errorCode` and `closedBy: peer`), `didcomm.{authorize,confirm,link
 reissue}.state-changed` (the exchange DTO plus `previousState`), `didcomm.notify.notification-received`, `didcomm.peer-status.status-received` (what a peer says of this agent, with the status it replaces) `didcomm.peer-status.query-received` (a peer asks; `answered` tells whether the plugin sent the status it holds) and `didcomm.peer-status.authenticate-received` (a peer asks to be asked for its credential: the controller opens an `authenticate` flow).
 
 `didcomm.authenticate.state-changed` (the authentication DTO plus `previousState`: `choice-received` with the
-`combination`, `answer-received` with the answer on its step in `steps`), `didcomm.authenticate.enrol-state-changed`
+`combination`, `answer-received` with the answer on its step in `steps`; a consent declined arrives as
+`answer-received` with `consent: false`, the `step-result-sent` that ends it `consent-declined` carries
+`awaitingChoice: true` and `declinedMethods`, and the new choice arrives as `choice-received` again, the attempt
+before kept in `earlierAttempts`), `didcomm.authenticate.enrol-state-changed`
 (the enrolment DTO plus `previousState`: `request-received` with its `type`, `answer-received` with the `answer`;
 never an authenticator app's secret) and `didcomm.authenticate.unenrol-received` (`type`; the controller answers with
 a peer status whose `enrolled` no longer lists it).

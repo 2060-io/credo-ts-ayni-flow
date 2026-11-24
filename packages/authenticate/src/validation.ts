@@ -10,6 +10,7 @@ import {
   type AuthenticateStep,
   type AuthenticateStepResult,
   CONFIRMING_METHOD_TYPES,
+  CONSENT_DECLINED,
   ENROLLABLE_METHOD_TYPES,
   type EnrolAnswer,
   type EnrolChallenge,
@@ -108,6 +109,14 @@ export function findChosenCombination(request: AuthenticateRequest, choice: Auth
 }
 
 /**
+ * The combinations a new `choice` may name after a declined consent (§6.14): those of the request that hold none of
+ * the methods whose consent the person declined (`AuthenticateRecord.declinedMethods`).
+ */
+export function remainingCombinations(request: AuthenticateRequest, declinedMethods: readonly string[]): string[][] {
+  return request.combinations.filter((combination) => !combination.some((name) => declinedMethods.includes(name)))
+}
+
+/**
  * The order in which the service runs the methods of a combination (§6.14, FLOW-SIGNIN-008): the identifying ones
  * first, in the order the combination lists them, then the confirming ones, in that order.
  */
@@ -190,8 +199,9 @@ export function validateAnswer(step: AuthenticateStep, answer: AuthenticateAnswe
       if (!only('code')) return 'a code answer carries the code only'
       return undefined
     case 'consent':
-      // the holder answers only on the person's agreement (FLOW-SIGNIN-012)
-      if (answer.consent !== true) return 'consent is true: the holder answers only on the person agreement'
+      // true on the person's agreement, false when the person declines (FLOW-SIGNIN-012)
+      if (typeof answer.consent !== 'boolean')
+        return 'consent is true (the person agrees) or false (the person declines)'
       if (!only('consent')) return 'a consent answer carries the consent only'
       return undefined
     case 'assertion': {
@@ -213,13 +223,27 @@ export function validateAnswer(step: AuthenticateStep, answer: AuthenticateAnswe
   }
 }
 
-/** The rules of profile §6.14 on a `step-result`: an outcome, and a reason when it is not `passed`. */
-export function validateStepResult(result: AuthenticateStepResult): string | undefined {
+/**
+ * The rules of profile §6.14 on a `step-result`: an outcome, and a reason when it is not `passed`. With the step it
+ * ends (its last `answer`): a step whose consent the person declined ends `failed` `consent-declined`, and only such a
+ * step ends `consent-declined`.
+ */
+export function validateStepResult(
+  result: AuthenticateStepResult,
+  step?: { answer?: AuthenticateAnswer }
+): string | undefined {
   if (!isText(result?.step)) return 'step is required'
   if (!known(AUTHENTICATE_STEP_OUTCOMES, result.outcome))
     return `outcome must be one of ${AUTHENTICATE_STEP_OUTCOMES.join(', ')}`
   if (result.outcome === 'passed' && result.reason !== undefined) return 'a passed step carries no reason'
   if (result.outcome !== 'passed' && !isText(result.reason)) return `a ${result.outcome} step carries its reason`
+  const declined = step?.answer?.consent === false
+  if (result.reason === CONSENT_DECLINED) {
+    if (result.outcome !== 'failed') return `${CONSENT_DECLINED} ends a step failed`
+    if (step && !declined) return `${CONSENT_DECLINED} ends only a step whose consent the person declined`
+  } else if (declined) {
+    return `a step whose consent the person declined ends failed with ${CONSENT_DECLINED}`
+  }
   return undefined
 }
 

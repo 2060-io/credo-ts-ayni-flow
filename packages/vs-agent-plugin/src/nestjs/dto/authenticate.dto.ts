@@ -72,7 +72,8 @@ export class SendAuthenticateBodyDto extends CarrierRequestBaseDto {
 export class ChooseCombinationBodyDto {
   @ApiProperty({
     type: [String],
-    description: 'The method names of the combination chosen',
+    description:
+      'The method names of the combination chosen: in answer to the request, or again after a step that ended consent-declined, then a combination that holds no declined method (awaitingChoice, declinedMethods)',
     example: ['email', 'face'],
   })
   @IsArray()
@@ -202,7 +203,10 @@ export class AuthenticateAnswerDto {
   @IsBoolean()
   newCode?: boolean
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description:
+      'face-match consent: true on the person agreement, false when the person declines (the service then ends the step failed consent-declined)',
+  })
   @IsOptional()
   @IsBoolean()
   consent?: boolean
@@ -232,7 +236,8 @@ export class AuthenticateStepResultDto {
   outcome!: 'passed' | 'failed' | 'expired'
 
   @ApiPropertyOptional({
-    description: 'A code of the flow profile §11, when the step did not pass',
+    description:
+      'A code of the flow profile §11, when the step did not pass; consent-declined (with failed) ends a face-match step whose consent the person declined, and only such a step',
     example: 'step-failed',
   })
   @IsOptional()
@@ -271,14 +276,36 @@ export class AuthenticateExchangeDto {
   @ApiProperty({ description: 'The request as sent or received' })
   request!: Record<string, unknown>
 
-  @ApiPropertyOptional({ type: [String], description: 'The combination chosen, as the request lists it' })
+  @ApiPropertyOptional({
+    type: [String],
+    description:
+      'The combination chosen, as the request lists it; after a declined consent and a new choice, the new one',
+  })
   combination?: string[]
 
   @ApiProperty({
     description:
-      'The steps announced, in order: { step, method, type, prompt (the last step message), answer?, result?, awaitingAnswer }',
+      'The steps announced for the combination, in order: { step, method, type, prompt (the last step message), answer?, result?, awaitingAnswer }',
   })
   steps!: Record<string, unknown>[]
+
+  @ApiProperty({
+    description:
+      'The attempts before the current one, oldest first: { combination, steps }, the last step of each ended consent-declined. Empty until the person declines a consent and chooses again',
+  })
+  earlierAttempts!: Record<string, unknown>[]
+
+  @ApiProperty({
+    description:
+      'Whether a choice is awaited: none was made yet, or the current step ended consent-declined. The five minutes of the choice run again from that step result',
+  })
+  awaitingChoice!: boolean
+
+  @ApiProperty({
+    type: [String],
+    description: 'The methods whose consent the person declined: a new choice holds none of them',
+  })
+  declinedMethods!: string[]
 
   @ApiPropertyOptional({ description: 'With state failed: why (malformed, declined...)' })
   errorCode?: string
@@ -300,6 +327,9 @@ export function toAuthenticateExchangeDto(record: AuthenticateRecord): Authentic
     request: record.request as unknown as Record<string, unknown>,
     combination: record.combination,
     steps: record.steps as unknown as Record<string, unknown>[],
+    earlierAttempts: record.earlierAttempts as unknown as Record<string, unknown>[],
+    awaitingChoice: record.awaitingChoice,
+    declinedMethods: record.declinedMethods,
     errorCode: record.errorCode,
     errorDescription: record.errorDescription,
     createdAt: record.createdAt.toISOString(),
@@ -436,7 +466,10 @@ export class EnrolExchangeDto {
   })
   challenge?: Record<string, unknown>
 
-  @ApiProperty({ description: 'How many challenges were sent or received' })
+  @ApiProperty({
+    description:
+      'How many challenges were sent or received; an authenticator app takes three codes in all, a fourth challenge is refused',
+  })
   challenges!: number
 
   @ApiPropertyOptional({ description: 'The last answer' })

@@ -89,6 +89,11 @@ export enum AyniFlowErrorCode {
   StepExpired = 'step-expired',
   /** What a step proved matches no identity the service knows (§6.14); the service asks again. */
   NoMatch = 'no-match',
+  /**
+   * The `reason` of the `step-result` that ends a face-match step whose consent the person declined (§6.14); the holder
+   * may then choose another combination of the same request, one without that method.
+   */
+  ConsentDeclined = 'consent-declined',
   /** The methods of the combination found different people (§6.14); the service asks again. */
   DifferentIdentities = 'different-identities',
   /** The authentication found another person than the one the connection is identified as; the service does not ask again. */

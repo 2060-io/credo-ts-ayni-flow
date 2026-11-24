@@ -13,14 +13,20 @@ import {
   AUTHENTICATE_UNENROL_TYPE,
   AuthenticateAnswerMessage,
   AuthenticateChoiceMessage,
+  AuthenticateRecord,
   type AuthenticateRequest,
   AuthenticateRequestMessage,
+  AuthenticateRole,
+  AuthenticateState,
   AuthenticateStepMessage,
   AuthenticateStepResultMessage,
+  CONSENT_DECLINED,
+  ENROL_AUTHENTICATOR_APP_ATTEMPTS,
   EnrolAnswerMessage,
   EnrolChallengeMessage,
   EnrolRequestMessage,
   findChosenCombination,
+  remainingCombinations,
   runOrder,
   UnenrolMessage,
   validateAnswer,
@@ -326,9 +332,10 @@ describe('authenticate/1.0 rules', () => {
     expect(validateAnswer({ ...codeStep, ask: 'address' }, { step: '1', address: 'ana@acme.example' })).toMatch(
       /locale/
     )
-    expect(validateAnswer({ ...codeStep, type: 'face-match', ask: 'consent' }, { step: '1', consent: false })).toMatch(
-      /consent is true/
-    )
+    const consentStep = { ...codeStep, type: 'face-match', ask: 'consent' as const }
+    expect(validateAnswer(consentStep, { step: '1', consent: true })).toBeUndefined()
+    expect(validateAnswer(consentStep, { step: '1', consent: 'yes' as never })).toMatch(/true .* or false/)
+    expect(validateAnswer(consentStep, { step: '1', consent: false, code: '1' })).toMatch(/consent only/)
     expect(validateAnswer({ step: '1', method: 'badge', type: 'credential' }, { step: '1', code: '1' })).toMatch(
       /answered by its carrier/
     )
@@ -337,6 +344,90 @@ describe('authenticate/1.0 rules', () => {
     expect(validateStepResult({ step: '1', outcome: 'failed' })).toMatch(/carries its reason/)
     expect(validateStepResult({ step: '1', outcome: 'passed', reason: 'x' })).toMatch(/no reason/)
     expect(validateStepResult({ step: '1', outcome: 'skipped' as never })).toMatch(/outcome must be one of/)
+  })
+
+  it('takes a declined consent, ends its step consent-declined and leaves the combinations without it (§6.14)', () => {
+    const consentStep = { step: '2', method: 'face', type: 'face-match', ask: 'consent' as const, text: 'May we?' }
+    // the person may decline the consent: the holder answers false
+    expect(validateAnswer(consentStep, { step: '2', consent: false })).toBeUndefined()
+
+    const declined = { answer: { step: '2', consent: false } }
+    const agreed = { answer: { step: '2', consent: true } }
+    const consentDeclined = { step: '2', outcome: 'failed' as const, reason: CONSENT_DECLINED }
+    expect(CONSENT_DECLINED).toBe('consent-declined')
+    expect(validateStepResult(consentDeclined, declined)).toBeUndefined()
+    expect(validateStepResult(consentDeclined)).toBeUndefined()
+    // a declined consent ends its step failed consent-declined, and nothing else does
+    expect(validateStepResult({ step: '2', outcome: 'passed' }, declined)).toMatch(/ends failed with consent-declined/)
+    expect(validateStepResult({ ...consentDeclined, reason: 'step-failed' }, declined)).toMatch(/consent-declined/)
+    expect(validateStepResult({ ...consentDeclined, outcome: 'expired' }, declined)).toMatch(/ends a step failed/)
+    expect(validateStepResult(consentDeclined, agreed)).toMatch(/only a step whose consent the person declined/)
+    expect(validateStepResult(consentDeclined, {})).toMatch(/only a step whose consent the person declined/)
+
+    // the combinations a new choice may name hold none of the declined methods
+    expect(remainingCombinations(connectionRequest, ['face'])).toEqual([['badge'], ['passport']])
+    expect(remainingCombinations(connectionRequest, [])).toEqual(connectionRequest.combinations)
+
+    // the answer and the step result travel as the profile writes them
+    const thread = { threadId: 'req-1', parentThreadId: 'f1ow-1' }
+    expect(
+      JsonTransformer.toJSON(new AuthenticateAnswerMessage({ ...thread, step: '2', consent: false }))
+    ).toMatchObject({ step: '2', consent: false })
+    expect(
+      JsonTransformer.fromJSON(
+        JsonTransformer.toJSON(new AuthenticateStepResultMessage({ ...thread, ...consentDeclined })),
+        AuthenticateStepResultMessage
+      ).toStepResult()
+    ).toEqual(consentDeclined)
+  })
+
+  it('keeps the attempt before a declined consent and waits for a new choice (§6.14)', () => {
+    const record = new AuthenticateRecord({
+      threadId: 'req-1',
+      connectionId: 'c-1',
+      role: AuthenticateRole.Requester,
+      state: AuthenticateState.RequestSent,
+      request: connectionRequest,
+    })
+    expect(record.awaitingChoice).toBe(true)
+    record.chooseCombination(['email', 'face'])
+    expect(record.awaitingChoice).toBe(false)
+    const email = { step: '1', method: 'email', type: 'email', prompt: { step: '1', method: 'email', type: 'email' } }
+    const face = {
+      step: '2',
+      method: 'face',
+      type: 'face-match',
+      prompt: { step: '2', method: 'face', type: 'face-match' },
+    }
+    record.steps.push(
+      { ...email, awaitingAnswer: false, result: { step: '1', outcome: 'passed' } },
+      {
+        ...face,
+        awaitingAnswer: false,
+        answer: { step: '2', consent: false },
+        result: { step: '2', outcome: 'failed', reason: CONSENT_DECLINED },
+      }
+    )
+    expect(record.awaitingChoice).toBe(true)
+    expect(record.declinedMethods).toEqual(['face'])
+
+    record.chooseCombination(['passport'])
+    expect(record.combination).toEqual(['passport'])
+    expect(record.steps).toEqual([])
+    expect(record.awaitingChoice).toBe(false)
+    expect(record.earlierAttempts).toMatchObject([
+      { combination: ['email', 'face'], steps: [{ step: '1' }, { step: '2', result: { reason: CONSENT_DECLINED } }] },
+    ])
+    // what was declined stays declined in the later attempts
+    expect(record.declinedMethods).toEqual(['face'])
+    // the record keeps its attempts as it is stored
+    const stored = JsonTransformer.fromJSON(JsonTransformer.toJSON(record), AuthenticateRecord)
+    expect(stored.earlierAttempts).toEqual(record.earlierAttempts)
+    expect(stored.declinedMethods).toEqual(['face'])
+    // a failed exchange waits for nothing
+    record.state = AuthenticateState.Failed
+    expect(record.awaitingChoice).toBe(false)
+    expect(ENROL_AUTHENTICATOR_APP_ATTEMPTS).toBe(3)
   })
 
   it('holds an enrolment to the rules of §6.4', () => {

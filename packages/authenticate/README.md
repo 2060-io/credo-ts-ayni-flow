@@ -32,7 +32,7 @@ carrying the flow id as `~thread.pthid`:
 | `request`: `purpose`, `methods`, `combinations`, `text` for a step-up | service | `request()` | `request-received` |
 | `choice`: the method names of the combination chosen | holder | `choose()` | `choice-received`, or `failed` (`malformed`) when it is not one of the combinations |
 | `step`: a step of the combination chosen, with its `ask` | service | `sendStep()` | `step-received` |
-| `answer`: the address and locale, a code or a new code, the consent, the passkey's assertion | holder | `answer()` | `answer-received` |
+| `answer`: the address and locale, a code or a new code, the consent (`true` or `false`), the passkey's assertion | holder | `answer()` | `answer-received` |
 | `step-result`: `passed`, `failed` or `expired`, with a reason | service | `sendStepResult()` | `step-result-received` |
 
 The record keeps the request, the combination chosen (as the request lists it) and the steps in order, each with its
@@ -49,14 +49,36 @@ last `step`, its last `answer` and its result. The module holds both sides to th
   `no-more`);
 - each `ask` carries what it needs (`expires_at`, `tries_left`, `new_codes_left` for an email code; `tries_left` for an
   authenticator app; `challenge` and `rp_id` for a passkey; `text` for a face match's consent), and its answer carries
-  its fields and those alone; a consent is `true` or not sent (FLOW-SIGNIN-012);
+  its fields and those alone; a consent is `true` on the person's agreement or `false` when the person declines
+  (FLOW-SIGNIN-012);
 - a `credential`, `document` or `face-match` step after its consent is answered by its carrier (present-proof 2.0,
   mrtd 1.0, calls 1.0) under the flow id, through its own module, never by an `answer`.
+
+### A declined consent
+
+The person may decline the consent of a `face-match` step: the holder answers `consent: false`, and the service ends
+the step with `step-result` `outcome: 'failed'`, `reason: 'consent-declined'` (`CONSENT_DECLINED`), and only such a
+step with that reason; it neither asks the consent again nor runs the call. The exchange then waits for a new
+`choice` on the same request (`record.awaitingChoice`): a combination that holds none of the methods whose consent was
+declined (`record.declinedMethods`; `remainingCombinations(request, declinedMethods)` lists them). The service sends
+no step until it comes. A second `choice` is accepted only after a `consent-declined` step result; any other fails the
+exchange `malformed`, except one that repeats the combination being run (a message delivered twice), which is
+ignored.
+
+The record keeps every attempt: `combination` and `steps` are the current one, and `earlierAttempts` the ones before,
+oldest first, each `{ combination, steps }` ending with its `consent-declined` step. A step id names a step within its
+attempt, so the new attempt may number its steps from `1` again. The five minutes of the choice
+(`AUTHENTICATE_CHOICE_TIMEOUT_MS`) run again from the `consent-declined` step result; the flow's fifteen minutes do
+not. The host runs both timers.
 
 A malformed message received is recorded `failed` with `errorCode: 'malformed'`; the host sends the flow's problem
 report through `ayni-flow`. The module decides nothing the host decides: whether the person's answer is right, whether
 the authentication is accepted (the service closes the flow `completed`, or sends a problem report with a reason of
-§11), the five minutes of the choice (`AUTHENTICATE_CHOICE_TIMEOUT_MS`), the tries and codes left.
+§11), the five minutes of the choice (`AUTHENTICATE_CHOICE_TIMEOUT_MS`, from the request and from each
+`consent-declined` step result), the tries and codes left. A refused new code carries its reason in the step
+(`error: 'new-code-refused'`, `reason` `too-soon` or `no-more`). The methods of a request have the shape of the peer
+status (§4.1): `type`, `credential` for a `credential` method, and `issuers`, the organizations whose credentials are
+accepted, absent when any accredited issuer is.
 
 ## An enrolment (§6.4)
 
@@ -70,7 +92,10 @@ The holder opens a flow of kind `enrol`, then:
 
 The `AuthenticateEnrolStateChanged` event of a challenge carries it in full; the records of both sides keep an
 authenticator app's challenge without its secret and link. After a wrong code the service sends a new challenge; the
-record counts them (`challenges`).
+record counts them (`challenges`). An authenticator app's enrolment takes three codes in all
+(`ENROL_AUTHENTICATOR_APP_ATTEMPTS`): after the third wrong code the service ends the enrolment `failed`; the module
+refuses to send a fourth challenge, and a holder that receives one fails the enrolment `malformed`. Whether a code is
+right stays the host's.
 
 `unenrol({ connectionId, type })` (holder) removes an enrolled method, outside any flow; the service hears
 `AuthenticateUnenrolReceived` and answers with a peer status whose `enrolled` no longer lists the type.

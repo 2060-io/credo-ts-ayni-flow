@@ -16,8 +16,10 @@ import { VsAgentEventTypes } from '@verana-labs/vs-agent-sdk'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import {
+  AnswerStepBodyDto,
   AYNI_FLOW_EVENT,
   ayniFlowEvents,
+  ChooseCombinationBodyDto,
   SendAuthenticateBodyDto,
   SendEnrolChallengeBodyDto,
   SendStepBodyDto,
@@ -175,6 +177,110 @@ describe('authenticate/1.0 through the Admin API and webhook events (CC-VSA-005,
     ).rejects.toThrow(/has not passed/)
     const failed = await flows.problemReport(flow.flowId, { code: 'step-failed', description: 'The code was wrong.' })
     expect(failed).toMatchObject({ state: 'failed', errorCode: 'step-failed' })
+  })
+
+  it('takes a declined consent through the routes, ends the step consent-declined and relays the new choice (§6.14)', async () => {
+    const flows = new V2DidcommAyniFlowController(service as any)
+    const authenticate = new V2DidcommAuthenticateController(service as any)
+    // the holder's routes, as tests and tooling use them
+    const onHolder = new V2DidcommAuthenticateController(holder as any)
+    const validateChoice = validator(V2DidcommAuthenticateController, ChooseCombinationBodyDto)
+    const validateAnswer = validator(V2DidcommAuthenticateController, AnswerStepBodyDto)
+    const stateOn = (agent: TestAgent<Modules>, state: AuthenticateState, threadId?: string) =>
+      waitForEvent(
+        agent,
+        'AuthenticateStateChanged' as any,
+        (e: any) => e.payload.record.state === state && (!threadId || e.payload.record.threadId === threadId)
+      )
+    const flow = await flows.open({
+      connectionId: serviceConnectionId,
+      kind: 'authenticate',
+      title: 'Authenticate to Acme',
+      origin: { channel: 'none' },
+      expiresTime: new Date(Date.now() + 15 * 60_000).toISOString(),
+    })
+    const received = stateOn(holder, AuthenticateState.RequestReceived)
+    const { threadId } = await authenticate.request({
+      connectionId: serviceConnectionId,
+      flowId: flow.flowId,
+      request: {
+        purpose: 'connection',
+        methods: { passport: { type: 'document' }, email: { type: 'email' }, face: { type: 'face-match' } },
+        combinations: [['passport'], ['email', 'face']],
+      },
+    })
+    await received
+    let chosen = stateOn(service, AuthenticateState.ChoiceReceived, threadId)
+    await onHolder.choose(threadId, await validateChoice({ combination: ['email', 'face'] }))
+    await chosen
+    let stepped = stateOn(holder, AuthenticateState.StepReceived, threadId)
+    await authenticate.step(threadId, { step: { step: '1', method: 'email', type: 'email', ask: 'address' } })
+    await stepped
+    let answered = stateOn(service, AuthenticateState.AnswerReceived, threadId)
+    await onHolder.answer(
+      threadId,
+      await validateAnswer({ answer: { step: '1', address: 'ana@acme.example', locale: 'es-CO' } })
+    )
+    await answered
+    let ended = stateOn(holder, AuthenticateState.StepResultReceived, threadId)
+    await authenticate.stepResult(threadId, { result: { step: '1', outcome: 'passed' } })
+    await ended
+    stepped = stateOn(holder, AuthenticateState.StepReceived, threadId)
+    await authenticate.step(threadId, {
+      step: { step: '2', method: 'face', type: 'face-match', ask: 'consent', text: 'May we film your face?' },
+    })
+    await stepped
+
+    // the person declines the consent: the route takes false
+    answered = stateOn(service, AuthenticateState.AnswerReceived, threadId)
+    await onHolder.answer(threadId, await validateAnswer({ answer: { step: '2', consent: false } }))
+    await answered
+    expect(events(AYNI_FLOW_EVENT.authenticateStateChanged).at(-1)).toMatchObject({
+      threadId,
+      state: 'answer-received',
+      awaitingChoice: false,
+      steps: [{ step: '1' }, { step: '2', answer: { step: '2', consent: false } }],
+    })
+    ended = stateOn(holder, AuthenticateState.StepResultReceived, threadId)
+    const afterResult = await authenticate.stepResult(threadId, {
+      result: { step: '2', outcome: 'failed', reason: 'consent-declined' },
+    })
+    expect(afterResult).toMatchObject({ state: 'step-result-sent', awaitingChoice: true, declinedMethods: ['face'] })
+    expect(events(AYNI_FLOW_EVENT.authenticateStateChanged).at(-1)).toMatchObject({
+      state: 'step-result-sent',
+      awaitingChoice: true,
+      declinedMethods: ['face'],
+    })
+    expect(await ended).toMatchObject({ payload: { record: { state: 'step-result-received' } } })
+    expect(await onHolder.get(threadId)).toMatchObject({ awaitingChoice: true, declinedMethods: ['face'] })
+
+    // the new choice: the declined method refused, another combination relayed with the attempt before
+    await expect(onHolder.choose(threadId, await validateChoice({ combination: ['email', 'face'] }))).rejects.toThrow(
+      /whose consent the person declined/
+    )
+    chosen = stateOn(service, AuthenticateState.ChoiceReceived, threadId)
+    await onHolder.choose(threadId, await validateChoice({ combination: ['passport'] }))
+    await chosen
+    const event = events(AYNI_FLOW_EVENT.authenticateStateChanged).at(-1) as any
+    expect(event).toMatchObject({
+      threadId,
+      state: 'choice-received',
+      previousState: 'step-result-sent',
+      combination: ['passport'],
+      steps: [],
+      awaitingChoice: false,
+      declinedMethods: ['face'],
+    })
+    expect(event.earlierAttempts).toMatchObject([
+      {
+        combination: ['email', 'face'],
+        steps: [
+          { step: '1', result: { outcome: 'passed' } },
+          { step: '2', result: { outcome: 'failed', reason: 'consent-declined' } },
+        ],
+      },
+    ])
+    await flows.close(flow.flowId, { outcome: 'cancelled' })
   })
 
   it('answers 409 to a step sent in an authenticate flow the holder declined (FLOW-CORE-005)', async () => {
