@@ -15,7 +15,6 @@ export interface OpenFlowOptions {
   description?: string
   origin: AyniFlowOriginOptions
   expiresTime: Date
-  requires?: string[]
   /** An app link the holder offers on the request's sheet (profile §5.1, FLOW-CORE-011). */
   link?: string
   steps?: AyniFlowStepOptions[]

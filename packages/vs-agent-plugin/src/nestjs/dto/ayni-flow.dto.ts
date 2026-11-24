@@ -110,12 +110,6 @@ export class OpenFlowBodyDto {
   @IsISO8601()
   expiresTime!: string
 
-  @ApiPropertyOptional({ type: [String], example: ['device-authentication'] })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  requires?: string[]
-
   @ApiPropertyOptional({
     description:
       "An app link the holder offers on the request's sheet, to the place where the person reads more of it; it navigates, never acts (flow profile §5.1, FLOW-CORE-011)",
@@ -202,9 +196,6 @@ export class FlowDto {
   @ApiProperty()
   expiresTime!: string
 
-  @ApiPropertyOptional({ type: [String] })
-  requires?: string[]
-
   @ApiPropertyOptional({ description: "The open's app link, offered on the holder's sheet (FLOW-CORE-011)" })
   link?: string
 
@@ -242,7 +233,6 @@ export function toFlowDto(record: AyniFlowRecord): FlowDto {
     description: record.description,
     origin: record.origin as FlowOriginDto,
     expiresTime: record.expiresTime.toISOString(),
-    requires: record.requires,
     link: record.link,
     steps: record.steps,
     reason: record.reason,

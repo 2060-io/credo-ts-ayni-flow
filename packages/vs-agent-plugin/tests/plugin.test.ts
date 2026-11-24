@@ -228,6 +228,9 @@ describe('Admin API and webhook events, service to holder', () => {
     // and so is a field the route does not declare, which is why a link needed one
     await expect(validate({ ...body, other: 'x' })).rejects.toThrow()
     await expect(validate({ ...body, link: undefined })).resolves.toMatchObject({ kind: 'authorize' })
+    // the route takes no requires: the phone authenticates per protocol (FLOW-CORE-010 retired)
+    await expect(validate({ ...body, requires: ['device-authentication'] })).rejects.toThrow()
+    expect(flow).not.toHaveProperty('requires')
   })
 
   it('sends the approvals of an authorize request through the route, after its validation (FLOW-AUTH-004)', async () => {

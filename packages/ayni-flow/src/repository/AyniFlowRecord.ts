@@ -36,7 +36,6 @@ export interface AyniFlowStorageProps {
   description?: string
   origin: AyniFlowOriginOptions
   expiresTime: Date
-  requires?: string[]
   /** The `open`'s app link, which the holder offers on the request's sheet (FLOW-CORE-011). */
   link?: string
   steps?: AyniFlowStepOptions[]
@@ -70,7 +69,6 @@ export class AyniFlowRecord extends BaseRecord<DefaultAyniFlowTags, CustomAyniFl
   @Type(() => Date)
   public expiresTime!: Date
 
-  public requires?: string[]
   /** The `open`'s app link (profile §5.1): the holder offers it on the request's sheet, and it navigates, never acts. */
   public link?: string
   public steps?: AyniFlowStepOptions[]
@@ -102,7 +100,6 @@ export class AyniFlowRecord extends BaseRecord<DefaultAyniFlowTags, CustomAyniFl
       this.description = props.description
       this.origin = props.origin
       this.expiresTime = props.expiresTime
-      this.requires = props.requires
       this.link = props.link
       this.steps = props.steps
       this.reason = props.reason
