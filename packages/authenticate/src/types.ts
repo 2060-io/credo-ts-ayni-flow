@@ -59,7 +59,9 @@ export interface AuthenticateStateChangedEvent extends BaseEvent {
 /**
  * Emitted on every message of an enrolment exchange; `previousState` is null when the record is created. With
  * `challenge-sent` and `challenge-received`, `challenge` is the challenge in full: the record keeps an authenticator
- * app's challenge without its secret, which the holder shows once and the service keeps sealed (agent D129).
+ * app's challenge without its secret, which the holder shows once and the service keeps sealed (agent D129). A
+ * challenge sent again after a wrong code carries `error: 'wrong-code'` and `triesLeft` (the codes left), in the event
+ * and on the record's `challenge`: the holder shows "That code was not right" with the tries left.
  */
 export interface EnrolStateChangedEvent extends BaseEvent {
   type: typeof AuthenticateEventTypes.EnrolStateChanged

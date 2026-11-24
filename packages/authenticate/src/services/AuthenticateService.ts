@@ -499,12 +499,12 @@ export class AuthenticateService {
       const record = await this.getEnrolByThreadId(agentContext, threadId)
       record.assertRole(AuthenticateRole.Requester)
       record.assertState([EnrolState.RequestReceived, EnrolState.AnswerReceived])
-      const invalid = validateEnrolChallenge({ type: record.enrolType }, challenge)
-      if (invalid) throw new CredoError(`authenticate: invalid enrol-challenge: ${invalid}`)
       if (record.enrolType === 'authenticator-app' && record.challenges >= ENROL_AUTHENTICATOR_APP_ATTEMPTS)
         throw new CredoError(
           `authenticate: an authenticator app's enrolment takes ${ENROL_AUTHENTICATOR_APP_ATTEMPTS} codes in all; after the last wrong code it ends failed`
         )
+      const invalid = validateEnrolChallenge({ type: record.enrolType }, challenge, record.challenges)
+      if (invalid) throw new CredoError(`authenticate: invalid enrol-challenge: ${invalid}`)
 
       const message = new EnrolChallengeMessage({
         ...challenge,
@@ -532,11 +532,7 @@ export class AuthenticateService {
         return null
       }
       const challenge = message.toChallenge()
-      const invalid =
-        validateEnrolChallenge({ type: record.enrolType }, challenge) ??
-        (record.enrolType === 'authenticator-app' && record.challenges >= ENROL_AUTHENTICATOR_APP_ATTEMPTS
-          ? `an authenticator app's enrolment takes ${ENROL_AUTHENTICATOR_APP_ATTEMPTS} codes in all`
-          : undefined)
+      const invalid = validateEnrolChallenge({ type: record.enrolType }, challenge, record.challenges)
       if (invalid) return this.failEnrolRecord(agentContext, record, 'malformed', invalid)
       record.challenge = keptChallenge(challenge)
       record.challenges += 1

@@ -87,7 +87,7 @@ The holder opens a flow of kind `enrol`, then:
 | Message | Sent by | API | Record state on the receiver |
 |---|---|---|---|
 | `enrol-request`: `type`, `authenticator-app` or `passkey` | holder | `enrol()` | `request-received` |
-| `enrol-challenge`: a passkey's `public_key`, or an authenticator app's `secret`, `otpauth_uri`, 6 `digits`, 30 s `period` | service | `sendEnrolChallenge()` | `challenge-received` |
+| `enrol-challenge`: a passkey's `public_key`, or an authenticator app's `secret`, `otpauth_uri`, 6 `digits`, 30 s `period`; after a wrong code also `error: "wrong-code"` and `tries_left` | service | `sendEnrolChallenge()` | `challenge-received` |
 | `enrol-answer`: the passkey's `attestation`, or the six-digit `code` | holder | `answerEnrol()` | `answer-received` |
 
 The `AuthenticateEnrolStateChanged` event of a challenge carries it in full; the records of both sides keep an
@@ -96,6 +96,25 @@ record counts them (`challenges`). An authenticator app's enrolment takes three 
 (`ENROL_AUTHENTICATOR_APP_ATTEMPTS`): after the third wrong code the service ends the enrolment `failed`; the module
 refuses to send a fourth challenge, and a holder that receives one fails the enrolment `malformed`. Whether a code is
 right stays the host's.
+
+A challenge sent again after a wrong code carries the same secret, `error: 'wrong-code'` and `triesLeft` (on the wire
+`tries_left`), the codes the person may still type, this challenge's included:
+`ENROL_AUTHENTICATOR_APP_ATTEMPTS` less the challenges sent before it, so `2` on the second challenge and `1` on the
+third. The first challenge carries neither, a passkey's never does.
+
+```ts
+// service, after the first wrong code
+await agent.modules.authenticate.sendEnrolChallenge({
+  threadId,
+  challenge: { type: 'authenticator-app', secret, otpauthUri, digits: 6, period: 30, error: 'wrong-code', triesLeft: 2 },
+})
+```
+
+Both sides hold it to its place (`validateEnrolChallenge(request, challenge, previous)`, `previous` being the
+challenges before it): `sendEnrolChallenge()` refuses a first challenge with `error` or `triesLeft`, a later one
+without them or with another count; a holder that receives such a challenge fails the enrolment `malformed`. On the
+holder, `error` and `triesLeft` are on the event's `challenge` and on the record's `challenge`, for "That code was not
+right, 2 tries left". The module cannot check that the secret is the same: neither record keeps it.
 
 `unenrol({ connectionId, type })` (holder) removes an enrolled method, outside any flow; the service hears
 `AuthenticateUnenrolReceived` and answers with a peer status whose `enrolled` no longer lists the type.

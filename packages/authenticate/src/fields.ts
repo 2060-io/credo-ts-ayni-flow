@@ -74,9 +74,10 @@ export const AUTHENTICATE_CHOICE_TIMEOUT_MS = 5 * 60 * 1000
 
 /**
  * The codes an authenticator app's enrolment takes in all (§6.4): a wrong code is answered with a new
- * `enrol-challenge`, and after the third wrong code the enrolment ends `failed`. The module refuses a fourth challenge
- * (on the service) and fails the enrolment `malformed` on receiving one (on the holder); whether a code is right is the
- * host's.
+ * `enrol-challenge` (`error: 'wrong-code'`, `triesLeft` this number less the challenges before it: 2, then 1), and
+ * after the third wrong code the enrolment ends `failed`. The module refuses a fourth challenge, or one whose `error`
+ * and `triesLeft` do not match its place (on the service), and fails the enrolment `malformed` on receiving one (on the
+ * holder); whether a code is right is the host's.
  */
 export const ENROL_AUTHENTICATOR_APP_ATTEMPTS = 3
 
@@ -196,7 +197,19 @@ export interface PasskeyCreationOptions {
   authenticatorSelection?: { residentKey?: string; userVerification?: string }
 }
 
-/** The `enrol-challenge` body: a passkey's creation options, or an authenticator app's secret. */
+/**
+ * Why an authenticator app's `enrol-challenge` is sent again (§6.4): the code the person typed was not right. Sent
+ * with the same secret and the codes left in `triesLeft`.
+ */
+export const ENROL_CHALLENGE_ERRORS = ['wrong-code'] as const
+export type EnrolChallengeError = (typeof ENROL_CHALLENGE_ERRORS)[number]
+
+/**
+ * The `enrol-challenge` body: a passkey's creation options, or an authenticator app's secret. An authenticator app's
+ * first challenge carries no `error` and no `triesLeft`; each one sent again after a wrong code carries both, `error:
+ * 'wrong-code'` and the codes left, `ENROL_AUTHENTICATOR_APP_ATTEMPTS` less the challenges sent before it (2, then
+ * 1). A passkey's challenge carries neither.
+ */
 export interface EnrolChallenge {
   type: EnrollableMethodType
   /** `passkey` */
@@ -209,6 +222,10 @@ export interface EnrolChallenge {
   digits?: number
   /** `authenticator-app`: 30 (seconds). */
   period?: number
+  /** `authenticator-app`, a challenge sent again: the code the person typed was not right. */
+  error?: EnrolChallengeError
+  /** `authenticator-app`, with `error`: the codes the person may still type, this challenge's included. */
+  triesLeft?: number
 }
 
 /** A passkey's attestation (WebAuthn), its binary fields base64url. */

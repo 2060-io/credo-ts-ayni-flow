@@ -11,6 +11,8 @@ import {
   type AuthenticateStepResult,
   CONFIRMING_METHOD_TYPES,
   CONSENT_DECLINED,
+  ENROL_AUTHENTICATOR_APP_ATTEMPTS,
+  ENROL_CHALLENGE_ERRORS,
   ENROLLABLE_METHOD_TYPES,
   type EnrolAnswer,
   type EnrolChallenge,
@@ -257,9 +259,18 @@ export function validateEnrolRequest(request: EnrolRequest | Unenrol): string | 
 /**
  * The rules of profile §6.4 on an `enrol-challenge`: the type of the request; for a passkey the creation options
  * (relying party, user, challenge, algorithms), for an authenticator app the base32 secret, the `otpauth` link, six
- * digits and thirty seconds.
+ * digits and thirty seconds. An authenticator app's challenge sent again after a wrong code carries `error:
+ * 'wrong-code'` and `triesLeft`, both or neither; a passkey's carries neither.
+ *
+ * With `previous`, the challenges of the exchange sent (or received) before this one, also its place: the first (0
+ * before it) carries neither `error` nor `triesLeft`; a later one carries both, `triesLeft` being
+ * `ENROL_AUTHENTICATOR_APP_ATTEMPTS - previous` (2, then 1); none follows the last code.
  */
-export function validateEnrolChallenge(request: EnrolRequest, challenge: EnrolChallenge): string | undefined {
+export function validateEnrolChallenge(
+  request: EnrolRequest,
+  challenge: EnrolChallenge,
+  previous?: number
+): string | undefined {
   if (challenge?.type !== request.type) return `type must be the type of the request, ${request.type}`
   if (challenge.type === 'passkey') {
     const options = challenge.publicKey
@@ -274,7 +285,16 @@ export function validateEnrolChallenge(request: EnrolRequest, challenge: EnrolCh
       options.pubKeyCredParams.some((param) => !isText(param?.type) || !Number.isInteger(param?.alg))
     )
       return 'public_key.pub_key_cred_params lists at least one type and alg'
-    if ([challenge.secret, challenge.otpauthUri, challenge.digits, challenge.period].some((v) => v !== undefined))
+    if (
+      [
+        challenge.secret,
+        challenge.otpauthUri,
+        challenge.digits,
+        challenge.period,
+        challenge.error,
+        challenge.triesLeft,
+      ].some((v) => v !== undefined)
+    )
       return 'a passkey challenge carries public_key only'
     return undefined
   }
@@ -284,6 +304,20 @@ export function validateEnrolChallenge(request: EnrolRequest, challenge: EnrolCh
     return 'otpauth_uri is an otpauth link'
   if (challenge.digits !== 6) return 'digits is 6'
   if (challenge.period !== 30) return 'period is 30'
+  if (challenge.error !== undefined && !known(ENROL_CHALLENGE_ERRORS, challenge.error))
+    return `error must be one of ${ENROL_CHALLENGE_ERRORS.join(', ')}`
+  if (challenge.triesLeft !== undefined && !isCount(challenge.triesLeft)) return 'tries_left is a whole number'
+  if ((challenge.error === undefined) !== (challenge.triesLeft === undefined))
+    return 'error and tries_left go together, on a challenge sent again after a wrong code'
+  if (previous !== undefined) {
+    if (previous >= ENROL_AUTHENTICATOR_APP_ATTEMPTS)
+      return `an authenticator app's enrolment takes ${ENROL_AUTHENTICATOR_APP_ATTEMPTS} codes in all`
+    if (previous === 0 && challenge.error !== undefined) return 'the first challenge carries no error and no tries_left'
+    if (previous > 0 && challenge.error === undefined)
+      return 'a challenge sent again after a wrong code carries error wrong-code and tries_left'
+    if (previous > 0 && challenge.triesLeft !== ENROL_AUTHENTICATOR_APP_ATTEMPTS - previous)
+      return `tries_left is ${ENROL_AUTHENTICATOR_APP_ATTEMPTS - previous}, the codes left of ${ENROL_AUTHENTICATOR_APP_ATTEMPTS}`
+  }
   return undefined
 }
 

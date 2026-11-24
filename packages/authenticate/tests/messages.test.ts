@@ -234,6 +234,25 @@ describe('authenticate/1.0 messages, as the profile writes them', () => {
     const appJson = JsonTransformer.toJSON(new EnrolChallengeMessage({ ...app, threadId: 'e-2' }))
     expect(appJson).toMatchObject({ type: 'authenticator-app', otpauth_uri: app.otpauthUri, digits: 6, period: 30 })
     expect(JsonTransformer.fromJSON(appJson, EnrolChallengeMessage).toChallenge()).toEqual(app)
+    // as it travels: a first challenge carries no error and no tries_left
+    expect(JSON.parse(JSON.stringify(appJson))).not.toHaveProperty('error')
+    expect(JSON.parse(JSON.stringify(appJson))).not.toHaveProperty('tries_left')
+    // sent again after a wrong code: the same secret, error and the codes left (§6.4)
+    const againJson = JsonTransformer.toJSON(
+      new EnrolChallengeMessage({ ...app, error: 'wrong-code', triesLeft: 2, threadId: 'e-2' })
+    )
+    expect(againJson).toMatchObject({
+      type: 'authenticator-app',
+      secret: app.secret,
+      error: 'wrong-code',
+      tries_left: 2,
+    })
+    expect(againJson).not.toHaveProperty('triesLeft')
+    expect(JsonTransformer.fromJSON(againJson, EnrolChallengeMessage).toChallenge()).toEqual({
+      ...app,
+      error: 'wrong-code',
+      triesLeft: 2,
+    })
 
     const attestation = { id: 'cred-1', clientDataJson: 'e30', attestationObject: 'bzE' }
     const answerJson = JsonTransformer.toJSON(
@@ -449,6 +468,36 @@ describe('authenticate/1.0 rules', () => {
     expect(validateEnrolChallenge({ type: 'authenticator-app' }, app)).toBeUndefined()
     expect(validateEnrolChallenge({ type: 'authenticator-app' }, { ...app, digits: 8 })).toMatch(/digits is 6/)
     expect(validateEnrolChallenge({ type: 'authenticator-app' }, { ...app, secret: 'not base32!' })).toMatch(/base32/)
+    // a wrong code: error and tries_left, both or neither, and in their place (§6.4, FLOW-SIGNIN-014)
+    const again = (triesLeft: number) => ({ ...app, error: 'wrong-code' as const, triesLeft })
+    expect(validateEnrolChallenge({ type: 'authenticator-app' }, again(2))).toBeUndefined()
+    expect(validateEnrolChallenge({ type: 'authenticator-app' }, { ...app, error: 'wrong-code' })).toMatch(
+      /go together/
+    )
+    expect(validateEnrolChallenge({ type: 'authenticator-app' }, { ...app, triesLeft: 2 })).toMatch(/go together/)
+    expect(validateEnrolChallenge({ type: 'authenticator-app' }, { ...again(2), error: 'expired' as never })).toMatch(
+      /error must be one of wrong-code/
+    )
+    expect(validateEnrolChallenge({ type: 'authenticator-app' }, again(-1))).toMatch(/whole number/)
+    expect(validateEnrolChallenge({ type: 'authenticator-app' }, again(1.5))).toMatch(/whole number/)
+    expect(validateEnrolChallenge({ type: 'authenticator-app' }, app, 0)).toBeUndefined()
+    expect(validateEnrolChallenge({ type: 'authenticator-app' }, again(2), 0)).toMatch(/first challenge carries no/)
+    expect(validateEnrolChallenge({ type: 'authenticator-app' }, app, 1)).toMatch(/carries error wrong-code/)
+    expect(validateEnrolChallenge({ type: 'authenticator-app' }, again(2), 1)).toBeUndefined()
+    expect(validateEnrolChallenge({ type: 'authenticator-app' }, again(1), 1)).toMatch(/tries_left is 2/)
+    expect(validateEnrolChallenge({ type: 'authenticator-app' }, again(1), 2)).toBeUndefined()
+    expect(validateEnrolChallenge({ type: 'authenticator-app' }, again(0), 2)).toMatch(/tries_left is 1/)
+    expect(validateEnrolChallenge({ type: 'authenticator-app' }, again(0), 3)).toMatch(/3 codes in all/)
+    expect(
+      validateEnrolChallenge({ type: 'passkey' }, { type: 'passkey', publicKey: passkeyOptions, triesLeft: 2 })
+    ).toMatch(/public_key only/)
+    expect(
+      validateEnrolChallenge(
+        { type: 'passkey' },
+        { type: 'passkey', publicKey: passkeyOptions, error: 'wrong-code' },
+        1
+      )
+    ).toMatch(/public_key only/)
     expect(validateEnrolAnswer({ type: 'authenticator-app' }, { code: '123456' })).toBeUndefined()
     expect(validateEnrolAnswer({ type: 'authenticator-app' }, { code: '12345' })).toMatch(/six digits/)
     expect(validateEnrolAnswer({ type: 'passkey' }, { code: '123456' })).toMatch(/attestation carries/)
