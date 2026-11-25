@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.4.0](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-peer-status@v0.3.2...credo-ts-didcomm-peer-status@v0.4.0) (2026-11-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* **peer-status:** authentication.credential and authentication.issuers are gone from a status; a credential method of authentication.methods carries them.
+
+### Features
+
+* "Get my badge": reissue with the reason missing, and issuable in the peer status ([bf8795c](https://github.com/2060-io/credo-ts-ayni-flow/commit/bf8795c88c79d022c39dbfccffeec81c1a3d3ba5))
+* authentication of a person: status fields, the authenticate message and the authenticate flow kind ([2348501](https://github.com/2060-io/credo-ts-ayni-flow/commit/23485018ca40c4ca8c01904e8e8f0bd36fa9c916))
+* peer-status/1.0, a party tells its peer where it stands; the session grant request names its endpoint ([27746da](https://github.com/2060-io/credo-ts-ayni-flow/commit/27746da2fc5ed21c0e921e22d4ed3f40d1a0b36b))
+* peer-status/1.0, a party tells its peer where it stands; the session grant request names its endpoint ([2ce69f6](https://github.com/2060-io/credo-ts-ayni-flow/commit/2ce69f6ced17cd7f2c5f67fd7db8cfa8081daf18))
+* **peer-status:** a status names the methods and combinations accepted, and what an identified peer may enrol and has enrolled ([b008c36](https://github.com/2060-io/credo-ts-ayni-flow/commit/b008c36d8d67f94a1956e115effdf6a6621fb994))
+* **peer-status:** tell an identified peer which credentials it may ask again (issuable) ([36f7f3d](https://github.com/2060-io/credo-ts-ayni-flow/commit/36f7f3d0cbc0f04ee8cfda99dd41bd67d18a039c))
+* the authentication of a person: organizations accepted and how to obtain the credential in the status, the authenticate message, the authenticate flow kind ([35f353b](https://github.com/2060-io/credo-ts-ayni-flow/commit/35f353bd5400c5a3d493e07f38fe1598c13f481f))
+
+
+### Bug Fixes
+
+* **deps:** the packages run on the Credo build of VS Agent 2.0.0-dev.113 ([4b4687d](https://github.com/2060-io/credo-ts-ayni-flow/commit/4b4687d925e2b7e83f15ae1b5aee9e2cc855e767))
+* **deps:** the packages run on the Credo build of VS Agent 2.0.0-dev.113 (0.8.0-alpha-20261106194154) ([ec29d81](https://github.com/2060-io/credo-ts-ayni-flow/commit/ec29d81773713b5798a60fdf31bd90d53a132dad))
+
 ## [0.3.2](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-peer-status@v0.3.1...credo-ts-didcomm-peer-status@v0.3.2) (2026-11-25)
 
 
