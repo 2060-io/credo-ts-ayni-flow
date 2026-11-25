@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.4.0](https://github.com/2060-io/credo-ts-ayni-flow/compare/vs-agent-plugin-ayni-flow@v0.3.2...vs-agent-plugin-ayni-flow@v0.4.0) (2026-11-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* **authenticate:** an `answer` may carry `consent: false`, which a service must end with a `step-result` `failed` `consent-declined` (`sendStepResult` refuses any other result for that step, and `sendStep` refuses to ask it again); after it the exchange waits for a new `choice` and `sendStep` refuses until it comes. A second `choice` that does not follow a `consent-declined` step result now fails the exchange `malformed` instead of being ignored (a repeat of the current combination is still ignored). `validateAnswer` accepts `consent: false`, `validateStepResult` takes the step it ends, and `createChoice` throws unless a choice is awaited. A fourth `enrol-challenge` of an authenticator app is refused on the service and fails the enrolment on the holder.
+* **ayni-flow:** `OpenFlowOptions.requires`, `AyniFlowOpenMessageOptions.requires`, `AyniFlowOpenMessage.requires` and `AyniFlowRecord.requires` are removed; an `open` no longer carries `requires`, and the plugin's open route refuses a body that names it.
+* **vs-agent-plugin:** the peer status carries authentication.methods (with a credential method's issuers) in place of authentication.credential and authentication.issuers; the call flow kind and the face-match-failed code are removed; authenticate/1.0 and the enrol flow are added.
+* **peer-status:** authentication.credential and authentication.issuers are gone from a status; a credential method of authentication.methods carries them.
+
+### Features
+
+* "Get my badge": reissue with the reason missing, and issuable in the peer status ([bf8795c](https://github.com/2060-io/credo-ts-ayni-flow/commit/bf8795c88c79d022c39dbfccffeec81c1a3d3ba5))
+* **authenticate:** a person may decline the face-match consent and choose another combination ([15580cd](https://github.com/2060-io/credo-ts-ayni-flow/commit/15580cdc0be09f3fbfca809e8a9514f55fb51cf6))
+* **authenticate:** authenticate/1.0, an authentication by one accepted combination of methods and the enrolment of an authenticator app or a passkey ([055bc0d](https://github.com/2060-io/credo-ts-ayni-flow/commit/055bc0d53a4c01ea24ac7e8077ec4f63811a01f8))
+* authentication of a person: status fields, the authenticate message and the authenticate flow kind ([2348501](https://github.com/2060-io/credo-ts-ayni-flow/commit/23485018ca40c4ca8c01904e8e8f0bd36fa9c916))
+* **authorize:** a request may carry approvals, the approvals needed and the other approvers (FLOW-AUTH-004) ([62c52ea](https://github.com/2060-io/credo-ts-ayni-flow/commit/62c52ea5eb19f3247b929386c279a083d3a50e36))
+* **authorize:** a request may carry approvals, the approvals needed and the other approvers (FLOW-AUTH-004) ([c282b88](https://github.com/2060-io/credo-ts-ayni-flow/commit/c282b8842aff3d2aac57abcf1ee1c951b24a7184))
+* **ayni-flow:** an open carries no requires; the phone's own authentication is asked per protocol ([660f617](https://github.com/2060-io/credo-ts-ayni-flow/commit/660f6179b55193ccca2cf7f7a4c39b0eccbb79e1))
+* peer-status/1.0, a party tells its peer where it stands; the session grant request names its endpoint ([27746da](https://github.com/2060-io/credo-ts-ayni-flow/commit/27746da2fc5ed21c0e921e22d4ed3f40d1a0b36b))
+* peer-status/1.0, a party tells its peer where it stands; the session grant request names its endpoint ([2ce69f6](https://github.com/2060-io/credo-ts-ayni-flow/commit/2ce69f6ced17cd7f2c5f67fd7db8cfa8081daf18))
+* **peer-status:** a status names the methods and combinations accepted, and what an identified peer may enrol and has enrolled ([b008c36](https://github.com/2060-io/credo-ts-ayni-flow/commit/b008c36d8d67f94a1956e115effdf6a6621fb994))
+* **peer-status:** tell an identified peer which credentials it may ask again (issuable) ([36f7f3d](https://github.com/2060-io/credo-ts-ayni-flow/commit/36f7f3d0cbc0f04ee8cfda99dd41bd67d18a039c))
+* **reissue:** ask for a credential the wallet holds none of, by its schema (reason missing) ([ddeba3b](https://github.com/2060-io/credo-ts-ayni-flow/commit/ddeba3b7ee87197615ef479521f2a7723410aed6))
+* the authentication of a person: organizations accepted and how to obtain the credential in the status, the authenticate message, the authenticate flow kind ([35f353b](https://github.com/2060-io/credo-ts-ayni-flow/commit/35f353bd5400c5a3d493e07f38fe1598c13f481f))
+* **vs-agent-plugin:** POST /didcomm/ayni-flow/flows takes the open's link, and every flow it returns names it (FLOW-CORE-011) ([f0c8831](https://github.com/2060-io/credo-ts-ayni-flow/commit/f0c8831548488173c8222178a30cfc5fded11e4b))
+* **vs-agent-plugin:** POST /didcomm/ayni-flow/flows takes the open's link, and every flow it returns names it (FLOW-CORE-011) ([09d02c8](https://github.com/2060-io/credo-ts-ayni-flow/commit/09d02c82967c868e2ac841855aaae45fcf2f2598))
+* **vs-agent-plugin:** VS Agent plugin serving the Ayni Flow Profile ([548e0be](https://github.com/2060-io/credo-ts-ayni-flow/commit/548e0bea401fdd10b8e9a85d33f173f5c5ce2c82))
+* **vs-agent-plugin:** VS Agent plugin serving the Ayni Flow Profile (Admin API v2, routing, webhook events) ([9d765f5](https://github.com/2060-io/credo-ts-ayni-flow/commit/9d765f51c6d235dbafc9bf94353609d7d3d5187e))
+
+
+### Bug Fixes
+
+* **authenticate:** an enrol-challenge sent again after a wrong code carries error and tries_left ([5c89338](https://github.com/2060-io/credo-ts-ayni-flow/commit/5c89338205ccf4b8ea959a9dc0a33d3b7e02293e))
+* **authenticate:** an enrol-challenge sent again after a wrong code carries error and tries_left ([1416bf7](https://github.com/2060-io/credo-ts-ayni-flow/commit/1416bf7a0b12a6bc66843ae8b079e08c7ae3ace5))
+* **ayni-flow:** a close taken before its flow's open ends the flow, and a closed flow stays closed (FLOW-CORE-005) ([1dc4466](https://github.com/2060-io/credo-ts-ayni-flow/commit/1dc4466cc3a3121b8312a7da45ac4bac50fa7215))
+* **ayni-flow:** a close taken before its flow's open ends the flow, and a closed flow stays closed (FLOW-CORE-005) ([901ebf9](https://github.com/2060-io/credo-ts-ayni-flow/commit/901ebf90f7824a1619724f308078557241e21e7e))
+* **deps:** the packages run on the Credo build of VS Agent 2.0.0-dev.113 ([4b4687d](https://github.com/2060-io/credo-ts-ayni-flow/commit/4b4687d925e2b7e83f15ae1b5aee9e2cc855e767))
+* **deps:** the packages run on the Credo build of VS Agent 2.0.0-dev.113 (0.8.0-alpha-20261106194154) ([ec29d81](https://github.com/2060-io/credo-ts-ayni-flow/commit/ec29d81773713b5798a60fdf31bd90d53a132dad))
+* **packages:** class-transformer and class-validator as peer dependencies, so a runtime install shares the agent's copies ([5d2cf20](https://github.com/2060-io/credo-ts-ayni-flow/commit/5d2cf20d4a8b33871a5bd6f048984ecad62e5a16))
+* **vs-agent-plugin:** emit Node-resolvable ESM (NodeNext, explicit .js imports) so VS Agent can import the package at runtime ([93b264d](https://github.com/2060-io/credo-ts-ayni-flow/commit/93b264dd94df2d3c7284159923ddf0959cae1c1f))
+* **vs-agent-plugin:** publish through the release workflow, with provenance ([390344b](https://github.com/2060-io/credo-ts-ayni-flow/commit/390344b95ab7c363c32923334c1028e0a2361cda))
+* **vs-agent-plugin:** publish through the release workflow, with provenance ([5c82fad](https://github.com/2060-io/credo-ts-ayni-flow/commit/5c82fad2817f5c80c9307bf92c7d74429c5f2c47))
+* **vs-agent-plugin:** restore the authenticate dependency and its release entry, dropped by release 0.1.11 ([973824b](https://github.com/2060-io/credo-ts-ayni-flow/commit/973824bc3fb5d98eaabd034db65bd81318217baa))
+* **vs-agent-plugin:** restore the authenticate dependency and its release entry, dropped by release 0.1.11 ([5fb27f4](https://github.com/2060-io/credo-ts-ayni-flow/commit/5fb27f4aeebe99ff07be91b7cd1af0b07c29230b))
+
 ## [0.3.2](https://github.com/2060-io/credo-ts-ayni-flow/compare/vs-agent-plugin-ayni-flow@v0.3.1...vs-agent-plugin-ayni-flow@v0.3.2) (2026-11-25)
 
 

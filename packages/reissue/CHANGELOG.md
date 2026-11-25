@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.4.0](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-reissue@v0.3.2...credo-ts-didcomm-reissue@v0.4.0) (2026-11-25)
+
+
+### Features
+
+* "Get my badge": reissue with the reason missing, and issuable in the peer status ([bf8795c](https://github.com/2060-io/credo-ts-ayni-flow/commit/bf8795c88c79d022c39dbfccffeec81c1a3d3ba5))
+* ayni-flow envelope and the seven carrier protocol modules ([39605f8](https://github.com/2060-io/credo-ts-ayni-flow/commit/39605f81682f2109e1a30c2d271d491f23cd1bc2))
+* ayni-flow envelope and the seven carrier protocol modules of the Ayni Flow Profile 1.0 ([fc7b173](https://github.com/2060-io/credo-ts-ayni-flow/commit/fc7b173c18c19a07e8ad1a0b2a62055f3db69400))
+* **reissue:** ask for a credential the wallet holds none of, by its schema (reason missing) ([ddeba3b](https://github.com/2060-io/credo-ts-ayni-flow/commit/ddeba3b7ee87197615ef479521f2a7723410aed6))
+* **vs-agent-plugin:** VS Agent plugin serving the Ayni Flow Profile ([548e0be](https://github.com/2060-io/credo-ts-ayni-flow/commit/548e0bea401fdd10b8e9a85d33f173f5c5ce2c82))
+
+
+### Bug Fixes
+
+* **deps:** the packages run on the Credo build of VS Agent 2.0.0-dev.113 ([4b4687d](https://github.com/2060-io/credo-ts-ayni-flow/commit/4b4687d925e2b7e83f15ae1b5aee9e2cc855e767))
+* **deps:** the packages run on the Credo build of VS Agent 2.0.0-dev.113 (0.8.0-alpha-20261106194154) ([ec29d81](https://github.com/2060-io/credo-ts-ayni-flow/commit/ec29d81773713b5798a60fdf31bd90d53a132dad))
+* **packages:** class-transformer and class-validator as peer dependencies, so a runtime install shares the agent's copies ([5d2cf20](https://github.com/2060-io/credo-ts-ayni-flow/commit/5d2cf20d4a8b33871a5bd6f048984ecad62e5a16))
+
 ## [0.3.2](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-reissue@v0.3.1...credo-ts-didcomm-reissue@v0.3.2) (2026-11-25)
 
 
