@@ -37,12 +37,7 @@ export class ReissueRequestMessage extends DidCommMessage {
 
   public toRequest(): ReissueRequest {
     return {
-      reference: {
-        credentialId: this.reference.credentialId,
-        schemaId: this.reference.schemaId,
-        credDefId: this.reference.credDefId,
-        issuedAt: this.reference.issuedAt.toISOString(),
-      },
+      reference: this.reference.toReference(),
       reason: this.reason,
     }
   }

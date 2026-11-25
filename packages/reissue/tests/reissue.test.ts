@@ -16,12 +16,15 @@ import {
   ReissueRole,
   ReissueState,
   type ReissueStateChangedEvent,
+  validateRequest,
 } from '../src'
 
 const request = {
   reference: { credentialId: 'cred-1', schemaId: 'schema-1', credDefId: 'cd-1', issuedAt: '2026-03-02T10:00:00.000Z' },
   reason: 'restore',
 }
+const BADGE = 'https://ecs.example/vt/schemas-badge-jsc.json'
+const missing = { reference: { jsonSchemaCredentialId: BADGE }, reason: 'missing' }
 
 describe('reissue/1.0 messages', () => {
   it('serialises request as the profile §6.11 example', () => {
@@ -38,6 +41,37 @@ describe('reissue/1.0 messages', () => {
       },
       reason: 'restore',
     })
+  })
+
+  it('serialises a request with the reason missing as the profile §6.11 example, the schema alone', () => {
+    const message = new ReissueRequestMessage({ ...missing, id: 'req-2', parentThreadId: 'f1ow-2' })
+    const json = JsonTransformer.toJSON(message)
+    expect(json).toEqual({
+      '@type': REISSUE_REQUEST_TYPE,
+      '@id': 'req-2',
+      '~thread': { thid: 'req-2', pthid: 'f1ow-2' },
+      reference: { json_schema_credential_id: BADGE },
+      reason: 'missing',
+    })
+    expect(JsonTransformer.fromJSON(json, ReissueRequestMessage).toRequest()).toEqual(missing)
+  })
+})
+
+describe('reissue/1.0 request rules (FLOW-REISSUE-001)', () => {
+  it('asks the four fields of the backup with the reason restore', () => {
+    expect(validateRequest(request)).toBeUndefined()
+    expect(validateRequest({ ...request, reference: { ...request.reference, credentialId: undefined } })).toMatch(
+      /credential_id/
+    )
+    expect(validateRequest({ reference: { jsonSchemaCredentialId: BADGE }, reason: 'restore' })).toMatch(
+      /credential_id/
+    )
+  })
+
+  it('asks the schema alone with the reason missing', () => {
+    expect(validateRequest(missing)).toBeUndefined()
+    expect(validateRequest({ reference: {}, reason: 'missing' })).toMatch(/json_schema_credential_id/)
+    expect(validateRequest({ reference: request.reference, reason: 'missing' })).toMatch(/json_schema_credential_id/)
   })
 })
 
@@ -89,6 +123,20 @@ describe('reissue/1.0 between a holder and an issuer', () => {
     const failed = await issuer.modules.reissue.fail(other.threadId, 'not-eligible', 'the badge was revoked')
     expect(failed.state).toBe(ReissueState.Failed)
     expect(failed.errorCode).toBe('not-eligible')
+  })
+
+  it('asks for a credential the holder holds none of (reason missing); the issuer reads the schema it names', async () => {
+    const sent = await holder.modules.reissue.request({ connectionId: holderConnectionId, request: missing })
+    const received = (await state(issuer, ReissueState.RequestReceived, sent.threadId)).payload.record
+    expect(received.request).toEqual(missing)
+    expect(received.request.reference.jsonSchemaCredentialId).toBe(BADGE)
+
+    const failed = await issuer.modules.reissue.fail(sent.threadId, 'unavailable', 'the earlier badge is not revoked')
+    expect(failed.errorCode).toBe('unavailable')
+
+    await expect(
+      holder.modules.reissue.request({ connectionId: holderConnectionId, request: { ...missing, reference: {} } })
+    ).rejects.toThrow(/json_schema_credential_id/)
   })
 
   it('refuses a request without a reason', async () => {

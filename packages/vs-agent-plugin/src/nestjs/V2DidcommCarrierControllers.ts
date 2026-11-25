@@ -308,7 +308,11 @@ export class V2DidcommReissueController extends CarrierReadController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Ask an issuer to reissue a credential (holder side)' })
+  @ApiOperation({
+    summary: 'Ask an issuer to reissue a credential (holder side)',
+    description:
+      'Sends reissue/1.0/request: with the reason restore, for a credential a backup names (credentialId, schemaId, credDefId, issuedAt); with the reason missing, for a schema the last peer status of the issuer lists in issuable (jsonSchemaCredentialId alone).',
+  })
   @ApiCreatedResponse({ type: CarrierExchangeDto })
   public async request(@Body() body: SendReissueBodyDto): Promise<CarrierExchangeDto> {
     const record = await this.agent.modules.reissue.request({
