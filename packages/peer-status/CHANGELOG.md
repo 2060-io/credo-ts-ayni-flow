@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.2](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-peer-status@v0.3.1...credo-ts-didcomm-peer-status@v0.3.2) (2026-11-25)
+
+
+### Features
+
+* "Get my badge": reissue with the reason missing, and issuable in the peer status ([bf8795c](https://github.com/2060-io/credo-ts-ayni-flow/commit/bf8795c88c79d022c39dbfccffeec81c1a3d3ba5))
+* **peer-status:** tell an identified peer which credentials it may ask again (issuable) ([36f7f3d](https://github.com/2060-io/credo-ts-ayni-flow/commit/36f7f3d0cbc0f04ee8cfda99dd41bd67d18a039c))
+
 ## [0.3.1](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-peer-status@v0.3.0...credo-ts-didcomm-peer-status@v0.3.1) (2026-11-24)
 
 

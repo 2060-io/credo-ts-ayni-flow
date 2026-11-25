@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.2](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-ayni-flow@v0.3.1...credo-ts-didcomm-ayni-flow@v0.3.2) (2026-11-25)
+
+
+### Features
+
+* "Get my badge": reissue with the reason missing, and issuable in the peer status ([bf8795c](https://github.com/2060-io/credo-ts-ayni-flow/commit/bf8795c88c79d022c39dbfccffeec81c1a3d3ba5))
+* **reissue:** ask for a credential the wallet holds none of, by its schema (reason missing) ([ddeba3b](https://github.com/2060-io/credo-ts-ayni-flow/commit/ddeba3b7ee87197615ef479521f2a7723410aed6))
+
 ## [0.3.1](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-ayni-flow@v0.3.0...credo-ts-didcomm-ayni-flow@v0.3.1) (2026-11-24)
 
 
