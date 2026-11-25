@@ -373,7 +373,7 @@ export class V2DidcommPeerStatusController {
   @ApiOperation({
     summary: 'Tell a peer where it stands',
     description:
-      'Sends peer-status/1.0/status: how this agent identifies the peer (none, optional, required, with the methods and the combinations it accepts and how to obtain what the peer lacks), what an identified peer may enrol and has enrolled, whether it is identified, and what is open to it. It replaces the status sent before. Send it only to a peer that disclosed the protocol.',
+      'Sends peer-status/1.0/status: how this agent identifies the peer (none, optional, required, with the methods and the combinations it accepts and how to obtain what the peer lacks), what an identified peer may enrol and has enrolled and may ask again when it holds none (issuable), whether it is identified, and what is open to it. It replaces the status sent before. Send it only to a peer that disclosed the protocol.',
   })
   @ApiCreatedResponse({ type: SentMessageDto })
   public async send(@Body() body: SendPeerStatusBodyDto): Promise<SentMessageDto> {

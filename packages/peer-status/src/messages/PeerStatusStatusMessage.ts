@@ -2,7 +2,14 @@ import { DidCommMessage, IsValidMessageType, parseMessageType } from '@credo-ts/
 import { Type } from 'class-transformer'
 import { IsArray, IsBoolean, IsOptional, IsString, ValidateNested } from 'class-validator'
 
-import { type PeerStatus, PeerStatusAuthenticationModel, PeerStatusRefusalModel } from '../fields'
+import {
+  issuableFromWire,
+  issuableToWire,
+  type PeerStatus,
+  PeerStatusAuthenticationModel,
+  type PeerStatusIssuableWire,
+  PeerStatusRefusalModel,
+} from '../fields'
 import { PEER_STATUS_STATUS_TYPE } from './PeerStatusProtocol'
 
 export interface PeerStatusStatusMessageOptions extends PeerStatus {
@@ -19,6 +26,7 @@ export class PeerStatusStatusMessage extends DidCommMessage {
       this.authentication = new PeerStatusAuthenticationModel(options.authentication)
       this.identified = options.identified
       this.open = [...options.open]
+      if (options.issuable) this.issuable = options.issuable.map(issuableToWire)
       if (options.refusal) this.refusal = new PeerStatusRefusalModel(options.refusal)
     }
   }
@@ -38,6 +46,11 @@ export class PeerStatusStatusMessage extends DidCommMessage {
   @IsString({ each: true })
   public open!: string[]
 
+  /** As it travels (snake_case); `toStatus()` gives the API's form. Checked by `validateStatus`. */
+  @IsOptional()
+  @IsArray()
+  public issuable?: PeerStatusIssuableWire[]
+
   @IsOptional()
   @ValidateNested()
   @Type(() => PeerStatusRefusalModel)
@@ -48,6 +61,9 @@ export class PeerStatusStatusMessage extends DidCommMessage {
       authentication: this.authentication.toAuthentication(),
       identified: this.identified,
       open: [...this.open],
+      ...(this.issuable !== undefined
+        ? { issuable: Array.isArray(this.issuable) ? this.issuable.map(issuableFromWire) : this.issuable }
+        : {}),
       ...(this.refusal
         ? {
             refusal: {

@@ -430,6 +430,32 @@ describe('Admin API and webhook events, service to holder', () => {
     const toldAgain = waitForEvent(holder, 'PeerStatusReceived' as any)
     await peerStatus.send(await validate({ connectionId: serviceConnectionId, status: identified }))
     expect(((await toldAgain) as any).payload.status).toEqual(identified)
+    // and what it may ask again when it holds none (FLOW-STAT-001, FLOW-REISSUE-002), relayed in camelCase
+    const reissuable = {
+      ...identified,
+      issuable: [{ jsonSchemaCredentialId: 'https://ecs.example/vt/schemas-badge-jsc.json', label: 'Acme badge' }],
+    }
+    const toldIssuable = waitForEvent(holder, 'PeerStatusReceived' as any)
+    await peerStatus.send(await validate({ connectionId: serviceConnectionId, status: reissuable }))
+    expect(((await toldIssuable) as any).payload.status).toEqual(reissuable)
+    expect(await peerStatus.get(serviceConnectionId)).toMatchObject({ sent: reissuable })
+    await expect(
+      validate({
+        connectionId: serviceConnectionId,
+        status: { ...reissuable, issuable: [{ jsonSchemaCredentialId: 'x', label: 'y', other: 'z' }] },
+      })
+    ).rejects.toThrow()
+    await expect(
+      validate({ connectionId: serviceConnectionId, status: { ...reissuable, issuable: [{ label: 'y' }] } })
+    ).rejects.toThrow()
+    await expect(
+      peerStatus.send(
+        await validate({
+          connectionId: serviceConnectionId,
+          status: { ...reissuable, authentication: status.authentication, identified: false, open: [] },
+        })
+      )
+    ).rejects.toThrow(/issuable is sent to an identified receiver only/)
     // the route refuses what it does not declare, the module what the profile does not allow
     await expect(
       validate({

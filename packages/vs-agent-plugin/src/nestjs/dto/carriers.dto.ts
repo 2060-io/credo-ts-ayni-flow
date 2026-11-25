@@ -713,6 +713,19 @@ export class PeerStatusRefusalDto {
   comment?: string
 }
 
+/** A credential this agent issues again to the peer when the peer holds none (profile §4.1 issuable, §6.11). */
+export class PeerStatusIssuableDto {
+  @ApiProperty({ example: 'https://ecs.example/vt/schemas-badge-jsc.json' })
+  @IsString()
+  @IsNotEmpty()
+  jsonSchemaCredentialId!: string
+
+  @ApiProperty({ description: 'The name a person reads', example: 'Acme badge' })
+  @IsString()
+  @IsNotEmpty()
+  label!: string
+}
+
 export class PeerStatusDto {
   @ApiProperty({ type: PeerStatusAuthenticationDto })
   @ValidateNested()
@@ -727,6 +740,17 @@ export class PeerStatusDto {
   @IsArray()
   @IsString({ each: true })
   open!: string[]
+
+  @ApiPropertyOptional({
+    type: [PeerStatusIssuableDto],
+    description:
+      'The credentials this agent issues again to the peer when it holds none (a reissue with the reason missing), each by the JSON schema credential of its schema and its name; to an identified peer only, absent when there is none',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PeerStatusIssuableDto)
+  issuable?: PeerStatusIssuableDto[]
 
   @ApiPropertyOptional({ type: PeerStatusRefusalDto, description: 'Present when this agent does not serve the peer' })
   @IsOptional()

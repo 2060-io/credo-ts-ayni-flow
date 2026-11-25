@@ -45,11 +45,33 @@ await agent.modules.peerStatus.send({
 | `authentication.enrol`, `authentication.enrolled` | `authenticator-app`, `passkey`; to an identified peer only | what the peer may enrol with the notifier (an `enrol` flow, profile §6.4), and what it enrolled |
 | `identified` | boolean | whether the notifier holds a valid identity for the peer |
 | `open` | names | what the peer may use on the connection now (`ag-ui`; `a2a` and `chat` are reserved) |
+| `issuable` | `{ jsonSchemaCredentialId, label }[]`; to an identified peer only, absent when there is none | the credentials the notifier issues again to the peer when the peer holds none, each by the JSON schema credential of its schema and the name a person reads |
 | `refusal` | `{ code, comment? }` | the notifier does not serve the peer; `open` is then empty |
 
-On the wire a credential method's schema is `credential.json_schema_credential_id`, as the profile writes it. The
-notifier sends only the method types, enrolment types and refusal codes of the profile; the receiver accepts ones it
-does not know (more come later) and cannot complete such a method.
+On the wire a credential method's schema is `credential.json_schema_credential_id`, and an entry of `issuable` is
+`{ json_schema_credential_id, label }`, as the profile writes them. The notifier sends only the method types,
+enrolment types and refusal codes of the profile; the receiver accepts ones it does not know (more come later) and
+cannot complete such a method. The notifier sends `issuable` to an identified peer only, never empty, each schema
+once; the receiver takes the list as it comes, as long as each entry names a schema and a label.
+
+### Asking again for a credential the wallet holds none of
+
+A holder reads `issuable` from the last status of the connection and, when its wallet holds no credential of one of
+those schemas issued by the notifier, may offer the person to ask for it again: a `reissue` with the reason `missing`
+(profile §6.11, the `@ayni.org/credo-ts-didcomm-reissue` package):
+
+```ts
+const issuable = (await agent.modules.peerStatus.findByConnectionId(connectionId))?.received?.issuable ?? []
+for (const { jsonSchemaCredentialId, label } of issuable) {
+  // the wallet holds none of this schema from this notifier: offer "Get my <label>"
+}
+// on the person's request, inside the `reissue` flow the holder opened
+await agent.modules.reissue.request({
+  connectionId,
+  parentThreadId: flowId,
+  request: { reference: { jsonSchemaCredentialId }, reason: 'missing' },
+})
+```
 
 The **receiver** gets a `PeerStatusReceived` event and finds the last status of a connection with
 `findByConnectionId(connectionId)`, in `received`. A receiver that holds none asks with `query({ connectionId })`:

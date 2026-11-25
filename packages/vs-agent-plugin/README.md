@@ -47,7 +47,7 @@ npm audit signatures
 | `POST /v2/didcomm/reissue` | the holder's side: ask an issuer to issue a credential again, `reason: restore` with the backup's `credentialId`, `schemaId`, `credDefId`, `issuedAt`, or `reason: missing` with `jsonSchemaCredentialId` alone, for a schema the issuer lists in `issuable`. The webhook event carries `request.reference` as sent, in camelCase |
 | `POST /v2/didcomm/reissue/{threadId}/answered` | record that a reissue was answered |
 | `POST /v2/didcomm/notify` | send a notification |
-| `POST /v2/didcomm/peer-status` | tell a peer where it stands: the rule by which it is identified, the methods and combinations accepted (a credential method with the organizations whose credentials are accepted), how to obtain what it lacks, what an identified peer may enrol and has enrolled, whether it is identified, what is open to it |
+| `POST /v2/didcomm/peer-status` | tell a peer where it stands: the rule by which it is identified, the methods and combinations accepted (a credential method with the organizations whose credentials are accepted), how to obtain what it lacks, what an identified peer may enrol and has enrolled, the credentials an identified peer may ask again when it holds none (`issuable`: `jsonSchemaCredentialId` and `label` each), whether it is identified, what is open to it |
 | `POST /v2/didcomm/peer-status/query`, `GET /v2/didcomm/peer-status/{connectionId}` | ask a peer for its status of this agent; read the last status sent and received on a connection |
 | `POST /v2/didcomm/revocation-notification` | send `revocation_notification/2.0/revoke` |
 | `POST /v2/didcomm/authenticate` | ask the person to authenticate inside an `authenticate` flow (`flowId`): `purpose`, `methods`, `combinations`, `text` for a step-up |
