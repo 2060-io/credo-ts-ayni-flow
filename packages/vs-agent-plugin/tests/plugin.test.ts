@@ -30,8 +30,9 @@ import {
   V2DidcommAuthorizeController,
   V2DidcommAyniFlowController,
   V2DidcommPeerStatusController,
+  V2DidcommReissueController,
 } from '../src'
-import { SendPeerStatusBodyDto } from '../src/nestjs/dto/carriers.dto.js'
+import { SendPeerStatusBodyDto, SendReissueBodyDto } from '../src/nestjs/dto/carriers.dto.js'
 
 describe('plugin shape', () => {
   it('builds a VS Agent plugin with the ten modules, twelve controllers and the routing table', () => {
@@ -429,6 +430,32 @@ describe('Admin API and webhook events, service to holder', () => {
     const toldAgain = waitForEvent(holder, 'PeerStatusReceived' as any)
     await peerStatus.send(await validate({ connectionId: serviceConnectionId, status: identified }))
     expect(((await toldAgain) as any).payload.status).toEqual(identified)
+    // and what it may ask again when it holds none (FLOW-STAT-001, FLOW-REISSUE-002), relayed in camelCase
+    const reissuable = {
+      ...identified,
+      issuable: [{ jsonSchemaCredentialId: 'https://ecs.example/vt/schemas-badge-jsc.json', label: 'Acme badge' }],
+    }
+    const toldIssuable = waitForEvent(holder, 'PeerStatusReceived' as any)
+    await peerStatus.send(await validate({ connectionId: serviceConnectionId, status: reissuable }))
+    expect(((await toldIssuable) as any).payload.status).toEqual(reissuable)
+    expect(await peerStatus.get(serviceConnectionId)).toMatchObject({ sent: reissuable })
+    await expect(
+      validate({
+        connectionId: serviceConnectionId,
+        status: { ...reissuable, issuable: [{ jsonSchemaCredentialId: 'x', label: 'y', other: 'z' }] },
+      })
+    ).rejects.toThrow()
+    await expect(
+      validate({ connectionId: serviceConnectionId, status: { ...reissuable, issuable: [{ label: 'y' }] } })
+    ).rejects.toThrow()
+    await expect(
+      peerStatus.send(
+        await validate({
+          connectionId: serviceConnectionId,
+          status: { ...reissuable, authentication: status.authentication, identified: false, open: [] },
+        })
+      )
+    ).rejects.toThrow(/issuable is sent to an identified receiver only/)
     // the route refuses what it does not declare, the module what the profile does not allow
     await expect(
       validate({
@@ -456,6 +483,48 @@ describe('Admin API and webhook events, service to holder', () => {
     await asked
     const event = webhook.find((e) => e.type === AYNI_FLOW_EVENT.peerStatusAuthenticateReceived)
     expect(event?.data).toEqual({ connectionId: serviceConnectionId, messageId })
+  })
+
+  it('takes a reissue with the reason missing through the route and relays the schema it names (CC-VSA-013, FLOW-REISSUE-002)', async () => {
+    const reissue = new V2DidcommReissueController(holder as any)
+    const [pipe] = Reflect.getMetadata(PIPES_METADATA, V2DidcommReissueController) as ValidationPipe[]
+    const validate = (body: Record<string, unknown>) =>
+      pipe.transform(body, { type: 'body', metatype: SendReissueBodyDto, data: '' }) as Promise<SendReissueBodyDto>
+    const badge = 'https://ecs.example/vt/schemas-badge-jsc.json'
+    const holderConnection = (await holder.didcomm.connections.getAll())[0]
+    const body = {
+      connectionId: holderConnection.id,
+      request: { reference: { jsonSchemaCredentialId: badge }, reason: 'missing' },
+    }
+    const received = waitForEvent(
+      service,
+      'ReissueStateChanged' as any,
+      (e: any) => e.payload.record.state === 'request-received'
+    )
+    const sent = await reissue.request(await validate(body))
+    expect(sent.request).toEqual(body.request)
+    await received
+    const event = webhook.find(
+      (e) => e.type === AYNI_FLOW_EVENT.reissueStateChanged && e.data.threadId === sent.threadId
+    )
+    expect(event?.data).toMatchObject({
+      state: 'request-received',
+      request: { reference: { jsonSchemaCredentialId: badge }, reason: 'missing' },
+    })
+    // the route still takes the restore form, refuses a field it does not declare, and the module the reason's rule
+    await expect(
+      validate({
+        ...body,
+        request: {
+          reference: { credentialId: 'c', schemaId: 's', credDefId: 'd', issuedAt: '2026-03-02T10:00:00Z' },
+          reason: 'restore',
+        },
+      })
+    ).resolves.toBeTruthy()
+    await expect(validate({ ...body, request: { ...body.request, reference: { other: 'x' } } })).rejects.toThrow()
+    await expect(
+      reissue.request(await validate({ ...body, request: { reference: {}, reason: 'missing' } }))
+    ).rejects.toThrow(/json_schema_credential_id/)
   })
 })
 

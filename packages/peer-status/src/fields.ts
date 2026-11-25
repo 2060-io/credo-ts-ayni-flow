@@ -78,6 +78,15 @@ export interface PeerStatusRefusal {
 }
 
 /**
+ * A credential the notifier issues again to the receiver when the receiver holds none (profile §4.1 `issuable`, §6.11
+ * reason `missing`): the JSON schema credential of its schema, and the name a person reads.
+ */
+export interface PeerStatusIssuable {
+  jsonSchemaCredentialId: string
+  label: string
+}
+
+/**
  * The body of `peer-status/1.0/status` (profile §4.1, FLOW-STAT-001): where the receiver stands with the notifier.
  * A status replaces the one before it.
  */
@@ -87,6 +96,11 @@ export interface PeerStatus {
   identified: boolean
   /** What the receiver may use on the connection now; empty when nothing is. */
   open: string[]
+  /**
+   * The credentials the notifier issues again to the receiver when it holds none (a `reissue` with the reason
+   * `missing`, profile §6.11); sent to an identified receiver only, absent when the notifier lists none.
+   */
+  issuable?: PeerStatusIssuable[]
   /** Present when the notifier does not serve the receiver; `open` is then empty. */
   refusal?: PeerStatusRefusal
 }
@@ -130,6 +144,27 @@ export function methodFromWire(wire: unknown): PeerStatusMethod {
       : {}),
     ...(issuers !== undefined ? { issuers: Array.isArray(issuers) ? [...issuers] : issuers } : {}),
   }
+}
+
+/** An entry of `issuable` as it travels: snake_case, as the profile writes it. */
+export interface PeerStatusIssuableWire {
+  json_schema_credential_id: string
+  label: string
+}
+
+/** An entry of `issuable` as it travels, from the entry of the API. */
+export function issuableToWire(issuable: PeerStatusIssuable): PeerStatusIssuableWire {
+  return { json_schema_credential_id: issuable.jsonSchemaCredentialId, label: issuable.label }
+}
+
+/**
+ * An entry of `issuable` of the API, from what travelled. A value that is not an entry is kept as it came, so that the
+ * validation names what is wrong with it.
+ */
+export function issuableFromWire(wire: unknown): PeerStatusIssuable {
+  if (typeof wire !== 'object' || wire === null || Array.isArray(wire)) return wire as PeerStatusIssuable
+  const { json_schema_credential_id, label } = wire as Partial<PeerStatusIssuableWire>
+  return { jsonSchemaCredentialId: json_schema_credential_id as string, label: label as string }
 }
 
 export class PeerStatusObtainModel implements PeerStatusObtain {

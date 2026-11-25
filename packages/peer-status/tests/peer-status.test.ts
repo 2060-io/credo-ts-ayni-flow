@@ -74,6 +74,9 @@ const enrolled: PeerStatus = {
   open: ['ag-ui'],
 }
 
+/** An identified person who may ask again for the badge when the wallet holds none (§4.1 issuable, §6.11). */
+const reissuable: PeerStatus = { ...identified, issuable: [{ jsonSchemaCredentialId: BADGE, label: 'Acme badge' }] }
+
 describe('peer-status/1.0 messages', () => {
   it('serialises status as the profile §4.1 example', () => {
     const json = JsonTransformer.toJSON(new PeerStatusStatusMessage({ ...offered, id: 's-1' }))
@@ -115,6 +118,39 @@ describe('peer-status/1.0 messages', () => {
     expect(json.authentication.methods.key).toEqual({ type: 'passkey' })
     expect(JsonTransformer.fromJSON(json, PeerStatusStatusMessage).toStatus()).toEqual(enrolled)
     expect(validateStatus(enrolled, { strictTypes: true })).toBeUndefined()
+  })
+
+  it('carries what an identified receiver may ask again when it holds none (§4.1 issuable)', () => {
+    const json = JsonTransformer.toJSON(new PeerStatusStatusMessage({ ...reissuable, id: 's-5' }))
+    expect(json.issuable).toEqual([{ json_schema_credential_id: BADGE, label: 'Acme badge' }])
+    expect(JsonTransformer.fromJSON(json, PeerStatusStatusMessage).toStatus()).toEqual(reissuable)
+    expect(validateStatus(reissuable, { strictIssuable: true })).toBeUndefined()
+    const plain = JsonTransformer.toJSON(new PeerStatusStatusMessage({ ...identified, id: 's-6' }))
+    expect(plain).not.toHaveProperty('issuable')
+    expect(JsonTransformer.fromJSON(plain, PeerStatusStatusMessage).toStatus()).not.toHaveProperty('issuable')
+  })
+
+  it('holds issuable to the rules of the profile: strict for the notifier, tolerant for the receiver', () => {
+    const withIssuable = (issuable: unknown): PeerStatus => ({ ...reissuable, issuable: issuable as never })
+    // the shape, on both sides
+    expect(validateStatus(withIssuable({}))).toMatch(/issuable must be a list/)
+    expect(validateStatus(withIssuable(['x']))).toMatch(/issuable\[0\] must be an object/)
+    expect(validateStatus(withIssuable([{ label: 'Acme badge' }]))).toMatch(
+      /issuable\[0\].json_schema_credential_id is required/
+    )
+    expect(validateStatus(withIssuable([{ jsonSchemaCredentialId: BADGE, label: '' }]))).toMatch(
+      /issuable\[0\].label is required/
+    )
+    // what a notifier sends: to an identified receiver only, absent rather than empty, each schema once
+    const toVisitor = { ...reissuable, identified: false }
+    const twice = withIssuable([...(reissuable.issuable ?? []), { jsonSchemaCredentialId: BADGE, label: 'Again' }])
+    expect(validateStatus(toVisitor, { strictIssuable: true })).toMatch(/identified receiver only/)
+    expect(validateStatus(withIssuable([]), { strictIssuable: true })).toMatch(/absent when the notifier lists none/)
+    expect(validateStatus(twice, { strictIssuable: true })).toMatch(/lists a schema twice/)
+    // a receiver takes those as they come
+    expect(validateStatus(toVisitor)).toBeUndefined()
+    expect(validateStatus(withIssuable([]))).toBeUndefined()
+    expect(validateStatus(twice)).toBeUndefined()
   })
 
   it('carries a refusal, and reads a status back as it was written', () => {
@@ -313,6 +349,28 @@ describe('peer-status/1.0 between a service and a holder', () => {
         status: { ...enrolled, authentication: { ...enrolled.authentication, enrol: ['email'] } },
       })
     ).rejects.toThrow(/enrol lists only/)
+    // back to the status the next test asks for
+    const again = waitForEvent<PeerStatusReceivedEvent>(holder, PeerStatusEventTypes.PeerStatusReceived)
+    await service.modules.peerStatus.send({ connectionId: serviceConnectionId, status: identified })
+    await again
+  })
+
+  it('tells an identified person what it may ask again when it holds none, and refuses to tell a visitor (FLOW-STAT-001)', async () => {
+    const received = waitForEvent<PeerStatusReceivedEvent>(holder, PeerStatusEventTypes.PeerStatusReceived)
+    await service.modules.peerStatus.send({ connectionId: serviceConnectionId, status: reissuable })
+    expect((await received).payload.status).toEqual(reissuable)
+    expect((await holder.modules.peerStatus.findByConnectionId(holderConnectionId))?.received?.issuable).toEqual([
+      { jsonSchemaCredentialId: BADGE, label: 'Acme badge' },
+    ])
+    await expect(
+      service.modules.peerStatus.send({
+        connectionId: serviceConnectionId,
+        status: { ...reissuable, identified: false, open: [] },
+      })
+    ).rejects.toThrow(/identified receiver only/)
+    await expect(
+      service.modules.peerStatus.send({ connectionId: serviceConnectionId, status: { ...identified, issuable: [] } })
+    ).rejects.toThrow(/absent when the notifier lists none/)
     // back to the status the next test asks for
     const again = waitForEvent<PeerStatusReceivedEvent>(holder, PeerStatusEventTypes.PeerStatusReceived)
     await service.modules.peerStatus.send({ connectionId: serviceConnectionId, status: identified })

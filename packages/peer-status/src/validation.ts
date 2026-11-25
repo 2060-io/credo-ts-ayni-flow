@@ -18,6 +18,11 @@ export interface ValidateStatusOptions {
    * sends only those, a receiver accepts one it does not know (more types come later) and cannot complete it.
    */
   strictTypes?: boolean
+  /**
+   * Also checks `issuable` as a notifier sends it: to an identified receiver only, absent rather than empty, each
+   * schema once. A receiver takes such a list as it comes.
+   */
+  strictIssuable?: boolean
 }
 
 const isText = (value: unknown): value is string => typeof value === 'string' && value !== ''
@@ -34,6 +39,8 @@ export function validateStatus(status: PeerStatus, options: ValidateStatusOption
     return 'authentication.enrol and authentication.enrolled are sent to an identified receiver only'
   if (!Array.isArray(status.open) || status.open.some((entry) => !isText(entry))) return 'open must be a list of names'
   if (new Set(status.open).size !== status.open.length) return 'open lists a name twice'
+  const invalidIssuable = validateIssuable(status, options)
+  if (invalidIssuable) return invalidIssuable
   if (status.refusal !== undefined) {
     if (!isText(status.refusal.code)) return 'refusal.code is required'
     if (options.strictRefusal && !(PEER_STATUS_REFUSAL_CODES as readonly string[]).includes(status.refusal.code))
@@ -124,6 +131,29 @@ function validateMethods(authentication: PeerStatusAuthentication, options: Vali
     const key = [...combination].sort().join('\u0000')
     if (seen.has(key)) return `${at} is listed twice`
     seen.add(key)
+  }
+  return undefined
+}
+
+/**
+ * `issuable` (profile §4.1): a list of credentials, each by the JSON schema credential of its schema and the name a
+ * person reads. A notifier sends it to an identified receiver only, and none rather than an empty list.
+ */
+function validateIssuable(status: PeerStatus, options: ValidateStatusOptions): string | undefined {
+  const { issuable } = status
+  if (issuable === undefined) return undefined
+  if (!Array.isArray(issuable)) return 'issuable must be a list'
+  for (const [index, entry] of issuable.entries()) {
+    const at = `issuable[${index}]`
+    if (typeof entry !== 'object' || entry === null) return `${at} must be an object`
+    if (!isText(entry.jsonSchemaCredentialId)) return `${at}.json_schema_credential_id is required`
+    if (!isText(entry.label)) return `${at}.label is required`
+  }
+  if (options.strictIssuable) {
+    if (!status.identified) return 'issuable is sent to an identified receiver only'
+    if (!issuable.length) return 'issuable is absent when the notifier lists none'
+    if (new Set(issuable.map((entry) => entry.jsonSchemaCredentialId)).size !== issuable.length)
+      return 'issuable lists a schema twice'
   }
   return undefined
 }

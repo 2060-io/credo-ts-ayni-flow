@@ -76,6 +76,8 @@ export enum AyniFlowErrorCode {
   ReadFailed = 'read-failed',
   NotEligible = 'not-eligible',
   UnknownReference = 'unknown-reference',
+  /** A `reissue` the service would answer, which it cannot issue now (§6.11); the holder may ask again later. */
+  Unavailable = 'unavailable',
   NotAccepted = 'not-accepted',
   NotFlowCapable = 'not-flow-capable',
   /** The presentation of a `credential` step of an `authenticate` flow was not accepted (§6.14); the service asks again. */

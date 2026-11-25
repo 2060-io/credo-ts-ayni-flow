@@ -493,25 +493,43 @@ export class SendNotificationBodyDto extends CarrierRequestBaseDto {
 
 // ---- reissue/1.0 (profile §6.11) ---------------------------------------------------------------
 
+/**
+ * The credential asked for again: with the reason `restore`, `credentialId`, `schemaId`, `credDefId` and `issuedAt`
+ * from the backup; with the reason `missing`, `jsonSchemaCredentialId` alone. The module checks them against the reason.
+ */
 export class ReissueReferenceDto {
-  @ApiProperty()
+  @ApiPropertyOptional({ description: 'Reason restore' })
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
-  credentialId!: string
+  credentialId?: string
 
-  @ApiProperty()
+  @ApiPropertyOptional({ description: 'Reason restore' })
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
-  schemaId!: string
+  schemaId?: string
 
-  @ApiProperty()
+  @ApiPropertyOptional({ description: 'Reason restore' })
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
-  credDefId!: string
+  credDefId?: string
 
-  @ApiProperty({ description: 'ISO 8601' })
+  @ApiPropertyOptional({ description: 'Reason restore; ISO 8601' })
+  @IsOptional()
   @IsISO8601()
-  issuedAt!: string
+  issuedAt?: string
+
+  @ApiPropertyOptional({
+    description:
+      'Reason missing: the JSON schema credential of the schema, one the last peer status of the issuer lists in issuable',
+    example: 'https://ecs.example/vt/schemas-badge-jsc.json',
+  })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  jsonSchemaCredentialId?: string
 }
 
 export class ReissueRequestDto {
@@ -520,7 +538,12 @@ export class ReissueRequestDto {
   @Type(() => ReissueReferenceDto)
   reference!: ReissueReferenceDto
 
-  @ApiProperty({ example: 'restore' })
+  @ApiProperty({
+    enum: ['restore', 'missing'],
+    description:
+      'restore: after a restore, for a credential the backup names; missing: the wallet holds no credential of a schema the issuer lists in issuable',
+    example: 'restore',
+  })
   @IsString()
   @IsNotEmpty()
   reason!: string
@@ -690,6 +713,19 @@ export class PeerStatusRefusalDto {
   comment?: string
 }
 
+/** A credential this agent issues again to the peer when the peer holds none (profile §4.1 issuable, §6.11). */
+export class PeerStatusIssuableDto {
+  @ApiProperty({ example: 'https://ecs.example/vt/schemas-badge-jsc.json' })
+  @IsString()
+  @IsNotEmpty()
+  jsonSchemaCredentialId!: string
+
+  @ApiProperty({ description: 'The name a person reads', example: 'Acme badge' })
+  @IsString()
+  @IsNotEmpty()
+  label!: string
+}
+
 export class PeerStatusDto {
   @ApiProperty({ type: PeerStatusAuthenticationDto })
   @ValidateNested()
@@ -704,6 +740,17 @@ export class PeerStatusDto {
   @IsArray()
   @IsString({ each: true })
   open!: string[]
+
+  @ApiPropertyOptional({
+    type: [PeerStatusIssuableDto],
+    description:
+      'The credentials this agent issues again to the peer when it holds none (a reissue with the reason missing), each by the JSON schema credential of its schema and its name; to an identified peer only, absent when there is none',
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PeerStatusIssuableDto)
+  issuable?: PeerStatusIssuableDto[]
 
   @ApiPropertyOptional({ type: PeerStatusRefusalDto, description: 'Present when this agent does not serve the peer' })
   @IsOptional()
