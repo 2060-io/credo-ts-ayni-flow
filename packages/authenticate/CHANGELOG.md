@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-authenticate@v0.3.1...credo-ts-didcomm-authenticate@v0.3.2) (2026-11-25)
+
+
+### Miscellaneous Chores
+
+* **credo-ts-didcomm-authenticate:** Synchronize ayni-flow versions
+
 ## [0.3.1](https://github.com/2060-io/credo-ts-ayni-flow/compare/credo-ts-didcomm-authenticate@v0.3.0...credo-ts-didcomm-authenticate@v0.3.1) (2026-11-24)
 
 
